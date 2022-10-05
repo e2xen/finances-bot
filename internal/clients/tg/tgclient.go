@@ -7,7 +7,9 @@ import (
 	"max.ks1230/project-base/internal/model/messages"
 )
 
-type TokenGetter interface {
+const defaultUpdateOffset = 0
+
+type tokenGetter interface {
 	Token() string
 }
 
@@ -15,10 +17,10 @@ type Client struct {
 	client *tgbotapi.BotAPI
 }
 
-func New(tokenGetter TokenGetter) (*Client, error) {
+func New(tokenGetter tokenGetter) (*Client, error) {
 	client, err := tgbotapi.NewBotAPI(tokenGetter.Token())
 	if err != nil {
-		return nil, errors.Wrap(err, "NewBotApi")
+		return nil, errors.Wrap(err, "cannot NewBotApi")
 	}
 	return &Client{client}, nil
 }
@@ -32,7 +34,7 @@ func (c *Client) SendMessage(text string, userID int64) error {
 }
 
 func (c *Client) ListenUpdates(msgModel *messages.Service) {
-	u := tgbotapi.NewUpdate(0)
+	u := tgbotapi.NewUpdate(defaultUpdateOffset)
 	u.Timeout = 60
 
 	updates := c.client.GetUpdatesChan(u)
@@ -40,7 +42,7 @@ func (c *Client) ListenUpdates(msgModel *messages.Service) {
 	log.Println("Start listening for messages")
 
 	for update := range updates {
-		if update.Message != nil { // If we got a message
+		if update.Message != nil {
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
 			err := msgModel.IncomingMessage(messages.Message{

@@ -9,12 +9,12 @@ import (
 
 const configFile = "data/config.yaml"
 
-type Config struct {
+type config struct {
 	Token string `yaml:"token"`
 }
 
 type Service struct {
-	config Config
+	config config
 }
 
 func New() (*Service, error) {

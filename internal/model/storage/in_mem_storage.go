@@ -1,42 +1,27 @@
 package storage
 
 import (
-	"time"
+	"max.ks1230/project-base/internal/model/user"
 )
 
-type ExpenseRecord struct {
-	Amount   float64
-	Category string
-	Created  time.Time
-}
-
-type UserRecord struct {
-	Expenses []ExpenseRecord
-}
-
-type UserStorage interface {
-	GetById(userID int64) (UserRecord, error)
-	SaveById(userID int64, rec UserRecord) error
-}
-
 type InMemStorage struct {
-	userMap map[int64]UserRecord
+	userMap map[int64]user.Record
 }
 
 func NewInMemStorage() *InMemStorage {
-	s := make(map[int64]UserRecord)
+	s := make(map[int64]user.Record)
 	return &InMemStorage{s}
 }
 
-func (s *InMemStorage) GetById(id int64) (UserRecord, error) {
-	user, ok := s.userMap[id]
+func (s *InMemStorage) GetByID(id int64) (user.Record, error) {
+	u, ok := s.userMap[id]
 	if !ok {
-		return UserRecord{}, nil
+		return user.Record{}, nil
 	}
-	return user, nil
+	return u, nil
 }
 
-func (s *InMemStorage) SaveById(id int64, rec UserRecord) error {
+func (s *InMemStorage) SaveByID(id int64, rec user.Record) error {
 	s.userMap[id] = rec
 	return nil
 }

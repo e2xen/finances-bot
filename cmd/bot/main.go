@@ -19,8 +19,8 @@ func main() {
 		log.Fatal("failed to init client:", err)
 	}
 
-	var userStorage storage.UserStorage = storage.NewInMemStorage()
-	msgService := messages.New(client, &userStorage)
+	userStorage := storage.NewInMemStorage()
+	msgService := messages.New(client, userStorage)
 
 	client.ListenUpdates(msgService)
 }

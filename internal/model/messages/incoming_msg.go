@@ -1,11 +1,6 @@
 package messages
 
-import (
-	"max.ks1230/project-base/internal/model/messages/handlers"
-	"max.ks1230/project-base/internal/model/storage"
-)
-
-type MessageSender interface {
+type messageSender interface {
 	SendMessage(text string, userID int64) error
 }
 
@@ -14,14 +9,14 @@ type MessageHandler interface {
 }
 
 type Service struct {
-	tgClient MessageSender
+	tgClient messageSender
 	handler  MessageHandler
 }
 
-func New(tgClient MessageSender, storage *storage.UserStorage) *Service {
+func New(tgClient messageSender, storage userStorage) *Service {
 	return &Service{
 		tgClient: tgClient,
-		handler:  handlers.New(storage),
+		handler:  newHandler(storage),
 	}
 }
 
