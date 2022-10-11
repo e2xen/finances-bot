@@ -12,7 +12,7 @@ package messages
 //func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 //	ctrl := gomock.NewController(t)
 //	sender := mocks.NewMockMessageSender(ctrl)
-//	model := New(sender, nil)
+//	model := NewService(sender, nil)
 //
 //	sender.EXPECT().SendMessage("hello", int64(123))
 //
@@ -27,7 +27,7 @@ package messages
 //func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
 //	ctrl := gomock.NewController(t)
 //	sender := mocks.NewMockMessageSender(ctrl)
-//	model := New(sender, nil)
+//	model := NewService(sender, nil)
 //
 //	sender.EXPECT().SendMessage("не знаю эту команду", int64(123))
 //

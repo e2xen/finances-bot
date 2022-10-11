@@ -13,10 +13,10 @@ type Service struct {
 	handler  MessageHandler
 }
 
-func New(tgClient messageSender, storage userStorage) *Service {
+func NewService(tgClient messageSender, storage userStorage, config config) *Service {
 	return &Service{
 		tgClient: tgClient,
-		handler:  newHandler(storage),
+		handler:  newHandler(storage, config),
 	}
 }
 
