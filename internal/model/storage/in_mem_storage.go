@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/entity/user"
@@ -50,10 +49,10 @@ func (s *InMemStorage) GetRate(name string) (currency.Rate, error) {
 
 	r, ok := s.rates[name]
 	if !ok {
-		return currency.Rate{}, errors.New(fmt.Sprintf("rate %s not found", name))
+		return currency.Rate{}, fmt.Errorf("rate %s not found", name)
 	}
 	if !r.Set {
-		return currency.Rate{}, errors.New(fmt.Sprintf("rate %s is not set yet", name))
+		return currency.Rate{}, fmt.Errorf("rate %s is not set yet", name)
 	}
 	return r, nil
 }
@@ -74,7 +73,7 @@ func (s *InMemStorage) UpdateRateValue(name string, val float64) error {
 
 	r, ok := s.rates[name]
 	if !ok {
-		return errors.New(fmt.Sprintf("rate %s not found", name))
+		return fmt.Errorf("rate %s not found", name)
 	}
 
 	r.BaseRate = val

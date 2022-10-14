@@ -1,6 +1,7 @@
 package rates
 
 import (
+	"context"
 	"fmt"
 	"github.com/pkg/errors"
 	"log"
@@ -16,7 +17,7 @@ type ratesStorage interface {
 }
 
 type ratesProvider interface {
-	GetRates(base string, relatives []string) (map[string]float64, error)
+	GetRates(base string, relatives []string, ctx context.Context) (map[string]float64, error)
 }
 
 type config interface {
@@ -29,14 +30,16 @@ type Puller struct {
 	provider     ratesProvider
 	baseCurrency string
 	pullingDelay int64
+	ctx          context.Context
 }
 
-func NewPuller(storage ratesStorage, provider ratesProvider, config config) (*Puller, error) {
+func NewPuller(storage ratesStorage, provider ratesProvider, ctx context.Context, config config) (*Puller, error) {
 	p := &Puller{
 		storage:      storage,
 		provider:     provider,
 		baseCurrency: config.BaseCurrency(),
 		pullingDelay: config.PullingDelayMinutes(),
+		ctx:          ctx,
 	}
 	err := p.initStorage()
 	if err != nil {
@@ -47,7 +50,7 @@ func NewPuller(storage ratesStorage, provider ratesProvider, config config) (*Pu
 
 func (p *Puller) initStorage() error {
 	if !utils.Contains(currency.Currencies, p.baseCurrency) {
-		return errors.New(fmt.Sprintf("unknown currency %s", p.baseCurrency))
+		return fmt.Errorf("unknown currency %s", p.baseCurrency)
 	}
 
 	for _, curr := range currency.Currencies {
@@ -65,17 +68,30 @@ func (p *Puller) initStorage() error {
 }
 
 func (p *Puller) Pull() {
+	ticker := time.NewTicker(time.Duration(p.pullingDelay) * time.Minute)
+	firstTick := make(chan struct{}, 1)
+	firstTick <- struct{}{}
+
+	log.Println("Start pulling rates")
 	for {
-		log.Println("Start pulling rates")
-		p.pullOnce()
-		log.Println("End pulling rates")
-		time.Sleep(time.Duration(p.pullingDelay) * time.Minute)
+		select {
+		case <-p.ctx.Done():
+			log.Println("Stop pulling rates")
+			return
+		// fake first tick to pull rates immediately
+		case <-firstTick:
+			p.pullOnce()
+		case <-ticker.C:
+			p.pullOnce()
+		}
 	}
 }
 
 func (p *Puller) pullOnce() {
+	log.Println("Pulling rates...")
+
 	relatives := p.nonBaseCurrencies()
-	pulledRates, err := p.provider.GetRates(p.baseCurrency, relatives)
+	pulledRates, err := p.provider.GetRates(p.baseCurrency, relatives, p.ctx)
 	if err != nil {
 		log.Println(errors.Wrap(err, "cannot get rates").Error())
 		return
@@ -84,11 +100,13 @@ func (p *Puller) pullOnce() {
 	for name, rate := range pulledRates {
 		err = p.storage.UpdateRateValue(name, rate)
 		if err == nil {
-			log.Println(fmt.Sprintf("succesfully saved rate %s", name))
+			log.Printf("successfully saved rate %s\n", name)
 		} else {
 			log.Println(errors.Wrap(err, fmt.Sprintf("failed to save rate %s", name)).Error())
 		}
 	}
+
+	log.Println("Pulled rates")
 }
 
 func (p *Puller) nonBaseCurrencies() []string {

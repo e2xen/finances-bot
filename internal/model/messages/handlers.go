@@ -12,6 +12,11 @@ import (
 )
 
 const dateLayout = "02.01.2006"
+const floatBitSize = 32
+
+const (
+	expenseCmdParts = 2
+)
 
 const (
 	dontUnderstandMessage = "I don't understand you :("
@@ -99,15 +104,15 @@ func (s *HandlerService) handleStart(_ string, _ int64) (string, error) {
 
 func (s *HandlerService) handleExpense(arg string, userID int64) (string, error) {
 	args := strings.Fields(arg)
-	if len(args) < 2 {
+	if len(args) < expenseCmdParts {
 		return incorrectUsageMessage, nil
 	}
-	amount, err := strconv.ParseFloat(args[1], 32)
+	amount, err := strconv.ParseFloat(args[1], floatBitSize)
 	if err != nil || amount <= 0 {
 		return incorrectExpenseMessage, errors.Wrap(err, "handle expense")
 	}
 	category, date := args[0], time.Now()
-	if len(args) > 2 {
+	if len(args) > expenseCmdParts {
 		date, err = time.ParseInLocation(dateLayout, args[2], location())
 		if err != nil {
 			return incorrectDateMessage, errors.Wrap(err, "handle expense")

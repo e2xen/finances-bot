@@ -1,8 +1,8 @@
 package fixer
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/pkg/errors"
 	"io"
 	"log"
@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	latestRatesUrl = "https://api.apilayer.com/fixer/latest"
+	latestRatesURL = "https://api.apilayer.com/fixer/latest"
 	baseParam      = "base"
 	relativesParam = "symbols"
 )
 
 type apiKeyGetter interface {
-	ApiKey() string
+	APIKey() string
 }
 
 type Client struct {
@@ -25,23 +25,22 @@ type Client struct {
 }
 
 type ratesResponse struct {
-	Base string `json:"base"`
-	//Date      time.Time          `json:"date"`
+	Base      string             `json:"base"`
 	Rates     map[string]float64 `json:"rates"`
 	Success   bool               `json:"success"`
 	Timestamp int64              `json:"timestamp"`
 }
 
 func New(getter apiKeyGetter) *Client {
-	return &Client{apiKey: getter.ApiKey()}
+	return &Client{apiKey: getter.APIKey()}
 }
 
-func (c *Client) GetRates(baseRate string, relativeRates []string) (map[string]float64, error) {
+func (c *Client) GetRates(baseRate string, relativeRates []string, ctx context.Context) (map[string]float64, error) {
 	client := &http.Client{}
 
-	req, err := http.NewRequest("GET", latestRatesUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", latestRatesURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "fixer client")
 	}
 
 	req.Header.Set("apikey", c.apiKey)
@@ -51,14 +50,17 @@ func (c *Client) GetRates(baseRate string, relativeRates []string) (map[string]f
 	req.URL.RawQuery = q.Encode()
 
 	res, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "fixer client")
+	}
 	if res.Body != nil {
 		defer res.Body.Close()
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "fixer client")
 	}
-	log.Println(fmt.Sprintf("new response from fixer: %s", string(body)))
+	log.Printf("new response from fixer: %s\n", string(body))
 
 	rates := ratesResponse{}
 	err = json.Unmarshal(body, &rates)

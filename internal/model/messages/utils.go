@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const commandParts = 2
+
 func location() *time.Location {
 	loc, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
@@ -18,9 +20,9 @@ func location() *time.Location {
 
 func parseCommand(text string) (cmd, arg string, err error) {
 	text = strings.TrimSpace(text)
-	split := strings.SplitN(text, " ", 2)
+	split := strings.SplitN(text, " ", commandParts)
 
-	if len(split) == 2 {
+	if len(split) == commandParts {
 		return split[0], split[1], nil
 	}
 	if strings.HasPrefix(text, "/") {
@@ -59,7 +61,7 @@ func groupByCategory(exps []user.ExpenseRecord) []string {
 	sort.Slice(records, func(i, j int) bool {
 		return records[i].float64 > records[j].float64
 	})
-	res := make([]string, 0, len(records)+2)
+	res := make([]string, 0)
 	for _, rec := range records {
 		res = append(res, fmt.Sprintf("%s: %.2f", rec.string, rec.float64))
 	}

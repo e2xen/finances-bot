@@ -1,9 +1,9 @@
 package config
 
 type TelegramConfig struct {
-	ApiToken string `yaml:"token"`
+	APIToken string `yaml:"token"`
 }
 
 func (t *TelegramConfig) Token() string {
-	return t.ApiToken
+	return t.APIToken
 }

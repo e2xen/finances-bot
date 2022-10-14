@@ -1,9 +1,9 @@
 package config
 
 type FixerConfig struct {
-	FixerApiKey string `yaml:"api-key"`
+	FixerAPIKey string `yaml:"api-key"`
 }
 
-func (f *FixerConfig) ApiKey() string {
-	return f.FixerApiKey
+func (f *FixerConfig) APIKey() string {
+	return f.FixerAPIKey
 }
