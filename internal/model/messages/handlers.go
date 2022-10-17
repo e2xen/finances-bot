@@ -36,10 +36,10 @@ const (
 )
 
 const (
-	startCommand    = "/start"
-	expenseCommand  = "/expense"
-	reportCommand   = "/report"
-	currencyCommand = "/currency"
+	startCmd    = "/start"
+	expenseCmd  = "/expense"
+	reportCmd   = "/report"
+	currencyCmd = "/currency"
 )
 
 type userStorage interface {
@@ -88,10 +88,10 @@ func (s *HandlerService) HandleMessage(text string, userID int64) (string, error
 
 func newMap(s *HandlerService) handlerMap {
 	m := make(handlerMap)
-	m[startCommand] = s.handleStart
-	m[expenseCommand] = s.handleExpense
-	m[reportCommand] = s.handleReport
-	m[currencyCommand] = s.handleCurrency
+	m[startCmd] = s.handleStart
+	m[expenseCmd] = s.handleExpense
+	m[reportCmd] = s.handleReport
+	m[currencyCmd] = s.handleCurrency
 
 	m[""] = s.handleNoCommand
 

@@ -1,22 +1,27 @@
 package messages
 
 import (
-	"github.com/golang/mock/gomock"
+	"github.com/gojuno/minimock/v3"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	mocks "max.ks1230/project-base/internal/mocks/messages"
+	"max.ks1230/project-base/internal/model/messages/mock"
 )
 
 func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	sender := mocks.NewMockmessageSender(ctrl)
-	model := NewService(sender, nil, nil)
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
 
-	sender.
-		EXPECT().
-		SendMessage("hello", int64(123))
+	cfg.BaseCurrencyMock.Return("RUB")
 
+	sender.SendMessageMock.
+		Expect("Hello! I am FinancesRoute bot 🤖", int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cfg)
 	err := model.IncomingMessage(Message{
 		Text:   "/start",
 		UserID: 123,
@@ -26,14 +31,21 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 }
 
 func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	sender := mocks.NewMockmessageSender(ctrl)
-	model := NewService(sender, nil, nil)
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
 
-	sender.EXPECT().SendMessage("не знаю эту команду", int64(123))
+	cfg.BaseCurrencyMock.Return("RUB")
 
+	sender.SendMessageMock.
+		Expect("I don't understand you :(", int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cfg)
 	err := model.IncomingMessage(Message{
-		Text:   "some text",
+		Text:   "/none",
 		UserID: 123,
 	})
 
