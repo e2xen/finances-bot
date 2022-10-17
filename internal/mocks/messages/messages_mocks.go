@@ -10,31 +10,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockMessageSender is a mock of MessageSender interface.
-type MockMessageSender struct {
+// MockmessageSender is a mock of messageSender interface.
+type MockmessageSender struct {
 	ctrl     *gomock.Controller
-	recorder *MockMessageSenderMockRecorder
+	recorder *MockmessageSenderMockRecorder
 }
 
-// MockMessageSenderMockRecorder is the mock recorder for MockMessageSender.
-type MockMessageSenderMockRecorder struct {
-	mock *MockMessageSender
+// MockmessageSenderMockRecorder is the mock recorder for MockmessageSender.
+type MockmessageSenderMockRecorder struct {
+	mock *MockmessageSender
 }
 
-// NewMockMessageSender creates a new mock instance.
-func NewMockMessageSender(ctrl *gomock.Controller) *MockMessageSender {
-	mock := &MockMessageSender{ctrl: ctrl}
-	mock.recorder = &MockMessageSenderMockRecorder{mock}
+// NewMockmessageSender creates a new mock instance.
+func NewMockmessageSender(ctrl *gomock.Controller) *MockmessageSender {
+	mock := &MockmessageSender{ctrl: ctrl}
+	mock.recorder = &MockmessageSenderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockMessageSender) EXPECT() *MockMessageSenderMockRecorder {
+func (m *MockmessageSender) EXPECT() *MockmessageSenderMockRecorder {
 	return m.recorder
 }
 
 // SendMessage mocks base method.
-func (m *MockMessageSender) SendMessage(text string, userID int64) error {
+func (m *MockmessageSender) SendMessage(text string, userID int64) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMessage", text, userID)
 	ret0, _ := ret[0].(error)
@@ -42,7 +42,45 @@ func (m *MockMessageSender) SendMessage(text string, userID int64) error {
 }
 
 // SendMessage indicates an expected call of SendMessage.
-func (mr *MockMessageSenderMockRecorder) SendMessage(text, userID interface{}) *gomock.Call {
+func (mr *MockmessageSenderMockRecorder) SendMessage(text, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockMessageSender)(nil).SendMessage), text, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockmessageSender)(nil).SendMessage), text, userID)
+}
+
+// MockMessageHandler is a mock of MessageHandler interface.
+type MockMessageHandler struct {
+	ctrl     *gomock.Controller
+	recorder *MockMessageHandlerMockRecorder
+}
+
+// MockMessageHandlerMockRecorder is the mock recorder for MockMessageHandler.
+type MockMessageHandlerMockRecorder struct {
+	mock *MockMessageHandler
+}
+
+// NewMockMessageHandler creates a new mock instance.
+func NewMockMessageHandler(ctrl *gomock.Controller) *MockMessageHandler {
+	mock := &MockMessageHandler{ctrl: ctrl}
+	mock.recorder = &MockMessageHandlerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockMessageHandler) EXPECT() *MockMessageHandlerMockRecorder {
+	return m.recorder
+}
+
+// HandleMessage mocks base method.
+func (m *MockMessageHandler) HandleMessage(text string, userID int64) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleMessage", text, userID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HandleMessage indicates an expected call of HandleMessage.
+func (mr *MockMessageHandlerMockRecorder) HandleMessage(text, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockMessageHandler)(nil).HandleMessage), text, userID)
 }

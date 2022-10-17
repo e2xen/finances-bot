@@ -10,7 +10,9 @@ import (
 const configFile = "data/config.yaml"
 
 type config struct {
-	Token string `yaml:"token"`
+	Telegram TelegramConfig `yaml:"telegram"`
+	Fixer    FixerConfig    `yaml:"fixer"`
+	App      AppConfig      `yaml:"app"`
 }
 
 type Service struct {
@@ -33,6 +35,14 @@ func New() (*Service, error) {
 	return s, nil
 }
 
-func (s *Service) Token() string {
-	return s.config.Token
+func (s *Service) Telegram() *TelegramConfig {
+	return &s.config.Telegram
+}
+
+func (s *Service) Fixer() *FixerConfig {
+	return &s.config.Fixer
+}
+
+func (s *Service) App() *AppConfig {
+	return &s.config.App
 }

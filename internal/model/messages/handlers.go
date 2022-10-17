@@ -3,14 +3,20 @@ package messages
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"max.ks1230/project-base/internal/model/user"
-	"sort"
+	"max.ks1230/project-base/internal/entity/currency"
+	"max.ks1230/project-base/internal/entity/user"
+	"max.ks1230/project-base/internal/utils"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const dateLayout = "02.01.2006"
+const floatBitSize = 32
+
+const (
+	expenseCmdParts = 2
+)
 
 const (
 	dontUnderstandMessage = "I don't understand you :("
@@ -24,17 +30,27 @@ const (
 	incorrectDateMessage     = "The date is incorrect. Should be dd.mm.yyyy"
 	cannotGetExpensesMessage = "Can't get your expenses atm. Try later"
 	cannotSaveExpenseMessage = "Can't save your expense atm. Try later"
+	cannotSetCurrencyMessage = "Can't set your preferred currency atm. Try later"
+	cannotGetRateMessage     = "Can't get currencies rates atm. Try later"
+	invalidCurrencyTemplate  = "I don't know that currency. Try one of: %s"
 )
 
 const (
-	startCommand   = "/start"
-	expenseCommand = "/expense"
-	reportCommand  = "/report"
+	startCmd    = "/start"
+	expenseCmd  = "/expense"
+	reportCmd   = "/report"
+	currencyCmd = "/currency"
 )
 
 type userStorage interface {
-	GetByID(userID int64) (user.Record, error)
-	SaveByID(userID int64, rec user.Record) error
+	GetUserByID(userID int64) (user.Record, error)
+	SaveUserByID(userID int64, rec user.Record) error
+	SetCurrencyForUser(userID int64, curr string) error
+	GetRate(name string) (currency.Rate, error)
+}
+
+type config interface {
+	BaseCurrency() string
 }
 
 type handler func(arg string, user int64) (string, error)
@@ -42,14 +58,16 @@ type handler func(arg string, user int64) (string, error)
 type handlerMap map[string]handler
 
 type HandlerService struct {
-	handlersMap handlerMap
-	storage     userStorage
+	handlersMap     handlerMap
+	storage         userStorage
+	defaultCurrency string
 }
 
-func newHandler(userStorage userStorage) *HandlerService {
+func newHandler(userStorage userStorage, config config) *HandlerService {
 	res := &HandlerService{
-		handlersMap: nil,
-		storage:     userStorage,
+		handlersMap:     nil,
+		storage:         userStorage,
+		defaultCurrency: config.BaseCurrency(),
 	}
 	res.handlersMap = newMap(res)
 	return res
@@ -68,24 +86,12 @@ func (s *HandlerService) HandleMessage(text string, userID int64) (string, error
 	return dontUnderstandMessage, nil
 }
 
-func parseCommand(text string) (cmd, arg string, err error) {
-	text = strings.TrimSpace(text)
-	split := strings.SplitN(text, " ", 2)
-
-	if len(split) == 2 {
-		return split[0], split[1], nil
-	}
-	if strings.HasPrefix(text, "/") {
-		return text, "", nil
-	}
-	return "", text, nil
-}
-
 func newMap(s *HandlerService) handlerMap {
 	m := make(handlerMap)
-	m[startCommand] = s.handleStart
-	m[expenseCommand] = s.handleExpense
-	m[reportCommand] = s.handleReport
+	m[startCmd] = s.handleStart
+	m[expenseCmd] = s.handleExpense
+	m[reportCmd] = s.handleReport
+	m[currencyCmd] = s.handleCurrency
 
 	m[""] = s.handleNoCommand
 
@@ -96,25 +102,17 @@ func (s *HandlerService) handleStart(_ string, _ int64) (string, error) {
 	return helloMessage, nil
 }
 
-func location() *time.Location {
-	loc, err := time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		return time.UTC
-	}
-	return loc
-}
-
 func (s *HandlerService) handleExpense(arg string, userID int64) (string, error) {
 	args := strings.Fields(arg)
-	if len(args) < 2 {
+	if len(args) < expenseCmdParts {
 		return incorrectUsageMessage, nil
 	}
-	amount, err := strconv.ParseFloat(args[1], 32)
+	amount, err := strconv.ParseFloat(args[1], floatBitSize)
 	if err != nil || amount <= 0 {
 		return incorrectExpenseMessage, errors.Wrap(err, "handle expense")
 	}
 	category, date := args[0], time.Now()
-	if len(args) > 2 {
+	if len(args) > expenseCmdParts {
 		date, err = time.ParseInLocation(dateLayout, args[2], location())
 		if err != nil {
 			return incorrectDateMessage, errors.Wrap(err, "handle expense")
@@ -127,12 +125,19 @@ func (s *HandlerService) handleExpense(arg string, userID int64) (string, error)
 		Created:  date,
 	}
 
-	userRec, err := s.storage.GetByID(userID)
+	userRec, err := s.storage.GetUserByID(userID)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle expense")
 	}
+
+	rate, err := s.storage.GetRate(userRec.PreferredCurrency(s.defaultCurrency))
+	if err != nil {
+		return cannotGetRateMessage, errors.Wrap(err, "handle report")
+	}
+
+	convertExpenseToBase(&expense, rate.BaseRate)
 	userRec.Expenses = append(userRec.Expenses, expense)
-	err = s.storage.SaveByID(userID, userRec)
+	err = s.storage.SaveUserByID(userID, userRec)
 	if err != nil {
 		return cannotSaveExpenseMessage, errors.Wrap(err, "handle expense")
 	}
@@ -140,7 +145,7 @@ func (s *HandlerService) handleExpense(arg string, userID int64) (string, error)
 }
 
 func (s *HandlerService) handleReport(arg string, user int64) (string, error) {
-	userRec, err := s.storage.GetByID(user)
+	userRec, err := s.storage.GetUserByID(user)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
 	}
@@ -159,46 +164,28 @@ func (s *HandlerService) handleReport(arg string, user int64) (string, error) {
 		expenses = filterExpensesAfter(expenses, time.Now().AddDate(-1, 0, 0))
 	}
 
+	rate, err := s.storage.GetRate(userRec.PreferredCurrency(s.defaultCurrency))
+	if err != nil {
+		return cannotGetRateMessage, errors.Wrap(err, "handle report")
+	}
+	expenses = convertExpensesFromBase(expenses, rate.BaseRate)
+
 	reportExpenses := groupByCategory(expenses)
 	return strings.Join(reportExpenses, "\n"), nil
 }
 
-func filterExpensesAfter(exps []user.ExpenseRecord, after time.Time) []user.ExpenseRecord {
-	res := make([]user.ExpenseRecord, 0)
-	for _, exp := range exps {
-		if after.Before(exp.Created) {
-			res = append(res, exp)
-		}
+func (s *HandlerService) handleCurrency(curr string, userID int64) (string, error) {
+	if !utils.Contains(currency.Currencies, curr) {
+		return fmt.Sprintf(invalidCurrencyTemplate, strings.Join(currency.Currencies, ", ")),
+			errors.New("handle currency")
 	}
-	return res
-}
 
-func groupByCategory(exps []user.ExpenseRecord) []string {
-	m := make(map[string]float64)
-	for _, exp := range exps {
-		m[exp.Category] += exp.Amount
+	err := s.storage.SetCurrencyForUser(userID, curr)
+	if err != nil {
+		return cannotSetCurrencyMessage, errors.Wrap(err, "handle currency")
 	}
-	records := make([]struct {
-		string
-		float64
-	}, 0, len(m))
-	total := 0.0
-	for cat, am := range m {
-		records = append(records, struct {
-			string
-			float64
-		}{cat, am})
-		total += am
-	}
-	sort.Slice(records, func(i, j int) bool {
-		return records[i].float64 > records[j].float64
-	})
-	res := make([]string, 0, len(records)+2)
-	for _, rec := range records {
-		res = append(res, fmt.Sprintf("%s: %.2f", rec.string, rec.float64))
-	}
-	res = append(res, "", fmt.Sprintf("Total: %.2f", total))
-	return res
+
+	return okMessage, nil
 }
 
 func (s *HandlerService) handleNoCommand(_ string, _ int64) (string, error) {
