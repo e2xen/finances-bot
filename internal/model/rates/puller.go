@@ -17,7 +17,7 @@ type ratesStorage interface {
 }
 
 type ratesProvider interface {
-	GetRates(base string, relatives []string, ctx context.Context) (map[string]float64, error)
+	GetRates(ctx context.Context, base string, relatives []string) (map[string]float64, error)
 }
 
 type config interface {
@@ -33,7 +33,7 @@ type Puller struct {
 	ctx          context.Context
 }
 
-func NewPuller(storage ratesStorage, provider ratesProvider, ctx context.Context, config config) (*Puller, error) {
+func NewPuller(ctx context.Context, storage ratesStorage, provider ratesProvider, config config) (*Puller, error) {
 	p := &Puller{
 		storage:      storage,
 		provider:     provider,
@@ -91,7 +91,7 @@ func (p *Puller) pullOnce() {
 	log.Println("Pulling rates...")
 
 	relatives := p.nonBaseCurrencies()
-	pulledRates, err := p.provider.GetRates(p.baseCurrency, relatives, p.ctx)
+	pulledRates, err := p.provider.GetRates(p.ctx, p.baseCurrency, relatives)
 	if err != nil {
 		log.Println(errors.Wrap(err, "cannot get rates").Error())
 		return

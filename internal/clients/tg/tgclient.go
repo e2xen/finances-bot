@@ -34,7 +34,7 @@ func (c *Client) SendMessage(text string, userID int64) error {
 	return nil
 }
 
-func (c *Client) ListenUpdates(msgModel *messages.Service, ctx context.Context) {
+func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Service) {
 	u := tgbotapi.NewUpdate(defaultUpdateOffset)
 	u.Timeout = 60
 

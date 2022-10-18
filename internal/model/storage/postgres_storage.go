@@ -3,10 +3,10 @@ package storage
 import (
 	"context"
 	"database/sql"
-	_ "database/sql"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/now"
+	// postgres driver
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
@@ -32,12 +32,12 @@ type PostgresStorage struct {
 }
 
 func NewPostgresStorage(ctx context.Context, config config) (*PostgresStorage, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf(dsnTemplate,
+	db, _ := sql.Open("postgres", fmt.Sprintf(dsnTemplate,
 		config.Username(),
 		config.Password(),
 		config.Host(),
 		config.Database()))
-	if err = db.PingContext(ctx); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, errors.Wrap(err, "cannot connect to database")
 	}
 	return &PostgresStorage{ctx, db}, nil
@@ -75,7 +75,12 @@ func (s *PostgresStorage) SaveExpense(userID int64, rec user.ExpenseRecord) erro
 		Values(userID, rec.Amount, rec.Category, rec.Created)
 
 	tx, err := s.db.BeginTx(s.ctx, nil)
-	defer tx.Rollback()
+	if err != nil {
+		return errors.Wrap(err, "save expense")
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
 	_, err = query.RunWith(tx).ExecContext(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "save expense")

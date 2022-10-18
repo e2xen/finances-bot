@@ -23,12 +23,12 @@ func NewInMemStorage() *InMemStorage {
 }
 
 func (s *InMemStorage) GetUserByID(id int64) (user.Record, error) {
-	u, _ := s.users[id]
+	u := s.users[id]
 	return u, nil
 }
 
 func (s *InMemStorage) SaveExpense(userID int64, record user.ExpenseRecord) error {
-	exps, _ := s.expenses[userID]
+	exps := s.expenses[userID]
 	exps = append(exps, record)
 	s.expenses[userID] = exps
 	return nil

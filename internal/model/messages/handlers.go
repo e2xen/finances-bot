@@ -82,10 +82,7 @@ func newHandler(userStorage userStorage, config config) *HandlerService {
 }
 
 func (s *HandlerService) HandleMessage(text string, userID int64) (string, error) {
-	cmd, arg, err := parseCommand(text)
-	if err != nil {
-		return "", errors.Wrap(err, "handle message")
-	}
+	cmd, arg := parseCommand(text)
 
 	handler, ok := s.handlersMap[cmd]
 	if ok {

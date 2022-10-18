@@ -40,14 +40,14 @@ func main() {
 		log.Fatal("failed to init postgres:", err)
 	}
 	msgService := messages.NewService(tgClient, userStorage, conf.App())
-	ratesPuller, err := rates.NewPuller(userStorage, fixerClient, ctx, conf.App())
+	ratesPuller, err := rates.NewPuller(ctx, userStorage, fixerClient, conf.App())
 	if err != nil {
 		log.Fatal("failed to init puller:", err)
 	}
 
 	go ratesPuller.Pull()
 
-	tgClient.ListenUpdates(msgService, ctx)
+	tgClient.ListenUpdates(ctx, msgService)
 }
 
 func cancelOnSignals(cancel context.CancelFunc, signals ...os.Signal) {

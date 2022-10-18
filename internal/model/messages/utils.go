@@ -18,17 +18,17 @@ func location() *time.Location {
 	return loc
 }
 
-func parseCommand(text string) (cmd, arg string, err error) {
+func parseCommand(text string) (cmd, arg string) {
 	text = strings.TrimSpace(text)
 	split := strings.SplitN(text, " ", commandParts)
 
 	if len(split) == commandParts {
-		return split[0], split[1], nil
+		return split[0], split[1]
 	}
 	if strings.HasPrefix(text, "/") {
-		return text, "", nil
+		return text, ""
 	}
-	return "", text, nil
+	return "", text
 }
 
 func filterExpensesAfter(exps []user.ExpenseRecord, after time.Time) []user.ExpenseRecord {
