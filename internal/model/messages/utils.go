@@ -81,3 +81,7 @@ func convertExpensesFromBase(expenses []user.ExpenseRecord, rate float64) (resul
 func convertExpenseToBase(exp *user.ExpenseRecord, rate float64) {
 	exp.Amount /= rate
 }
+
+func convertToBase(amount float64, rate float64) float64 {
+	return amount / rate
+}

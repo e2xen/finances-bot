@@ -35,7 +35,10 @@ func main() {
 
 	fixerClient := fixer.New(conf.Fixer())
 
-	userStorage := storage.NewInMemStorage()
+	userStorage, err := storage.NewPostgresStorage(ctx, conf.Postgres())
+	if err != nil {
+		log.Fatal("failed to init postgres:", err)
+	}
 	msgService := messages.NewService(tgClient, userStorage, conf.App())
 	ratesPuller, err := rates.NewPuller(userStorage, fixerClient, ctx, conf.App())
 	if err != nil {

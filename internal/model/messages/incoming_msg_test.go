@@ -2,10 +2,12 @@ package messages
 
 import (
 	"github.com/gojuno/minimock/v3"
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"max.ks1230/project-base/internal/entity/currency"
+	"max.ks1230/project-base/internal/entity/user"
 	"max.ks1230/project-base/internal/model/messages/mock"
+	"testing"
+	"time"
 )
 
 func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
@@ -19,6 +21,10 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 
 	sender.SendMessageMock.
 		Expect("Hello! I am FinancesRoute bot 🤖", int64(123)).
+		Return(nil)
+
+	storage.SaveUserByIDMock.
+		Expect(123, user.Record{}).
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
@@ -46,6 +52,208 @@ func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
 	model := NewService(sender, storage, cfg)
 	err := model.IncomingMessage(Message{
 		Text:   "/none",
+		UserID: 123,
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
+
+	cfg.BaseCurrencyMock.Return("RUB")
+
+	u := user.Record{}
+	u.SetPreferredCurrency("USD")
+	storage.
+		GetUserByIDMock.
+		Expect(123).
+		Return(user.Record{}, nil).
+		SaveUserByIDMock.
+		Expect(123, u).
+		Return(nil)
+
+	sender.SendMessageMock.
+		Expect("Gotcha!", int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cfg)
+	err := model.IncomingMessage(Message{
+		Text:   "/currency USD",
+		UserID: 123,
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
+
+	cfg.BaseCurrencyMock.Return("RUB")
+
+	storage.
+		GetUserByIDMock.
+		Expect(123).
+		Return(user.Record{}, nil).
+		SaveUserByIDMock.
+		Expect(123, user.Record{MonthLimit: 1000}).
+		Return(nil).
+		GetRateMock.
+		Expect("RUB").
+		Return(currency.Rate{BaseRate: 1}, nil)
+
+	sender.SendMessageMock.
+		Expect("Gotcha!", int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cfg)
+	err := model.IncomingMessage(Message{
+		Text:   "/limit 1000",
+		UserID: 123,
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
+
+	cfg.BaseCurrencyMock.Return("RUB")
+
+	sender.SendMessageMock.
+		Expect("Gotcha!", int64(123)).
+		Return(nil)
+
+	storage.
+		SaveExpenseMock.
+		Inspect(func(id int64, rec user.ExpenseRecord) {
+			assert.Equal(m, int64(123), id)
+			assert.Equal(m, float64(500), rec.Amount)
+			assert.Equal(m, "Internet", rec.Category)
+		}).
+		Return(nil).
+		GetUserByIDMock.
+		Expect(123).
+		Return(user.Record{}, nil).
+		GetRateMock.
+		Expect("RUB").
+		Return(currency.Rate{BaseRate: 1}, nil)
+
+	model := NewService(sender, storage, cfg)
+	err := model.IncomingMessage(Message{
+		Text:   "/expense Internet 500",
+		UserID: 123,
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
+
+	cfg.BaseCurrencyMock.Return("RUB")
+
+	storage.
+		GetUserExpensesMock.
+		Expect(123).
+		Return([]user.ExpenseRecord{
+			{
+				Amount:   1000,
+				Category: "Internet",
+				Created:  time.Now(),
+			},
+			{
+				Amount:   1500,
+				Category: "Shopping",
+				Created:  time.Now(),
+			},
+			{
+				Amount:   100,
+				Category: "Shopping",
+				Created:  time.Now(),
+			},
+		}, nil).
+		GetUserByIDMock.
+		Expect(123).
+		Return(user.Record{}, nil).
+		GetRateMock.
+		Expect("RUB").
+		Return(currency.Rate{BaseRate: 1}, nil)
+
+	sender.SendMessageMock.
+		Expect("Shopping: 1600.00\nInternet: 1000.00\n\nTotal: 2600.00", int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cfg)
+	err := model.IncomingMessage(Message{
+		Text:   "/report",
+		UserID: 123,
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cfg := mock.NewConfigMock(m)
+
+	cfg.BaseCurrencyMock.Return("RUB")
+
+	u := user.Record{}
+	u.SetPreferredCurrency("USD")
+	storage.
+		GetUserExpensesMock.
+		Expect(123).
+		Return([]user.ExpenseRecord{
+			{
+				Amount:   1000,
+				Category: "Internet",
+				Created:  time.Now(),
+			},
+			{
+				Amount:   1500,
+				Category: "Shopping",
+				Created:  time.Now(),
+			},
+			{
+				Amount:   100,
+				Category: "Shopping",
+				Created:  time.Now(),
+			},
+		}, nil).
+		GetUserByIDMock.
+		Expect(123).
+		Return(u, nil).
+		GetRateMock.
+		Expect("USD").
+		Return(currency.Rate{BaseRate: 0.1}, nil)
+
+	sender.SendMessageMock.
+		Expect("Shopping: 160.00\nInternet: 100.00\n\nTotal: 260.00", int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cfg)
+	err := model.IncomingMessage(Message{
+		Text:   "/report",
 		UserID: 123,
 	})
 

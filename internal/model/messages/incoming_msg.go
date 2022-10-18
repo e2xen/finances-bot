@@ -28,7 +28,7 @@ type Message struct {
 func (s *Service) IncomingMessage(msg Message) error {
 	resp, err := s.handler.HandleMessage(msg.Text, msg.UserID)
 	if err != nil {
-		_ = s.tgClient.SendMessage("Sorry, something weird happened...\n"+resp, msg.UserID)
+		_ = s.tgClient.SendMessage("Sorry, something wrong happened...\n"+resp, msg.UserID)
 		return err
 	}
 	return s.tgClient.SendMessage(resp, msg.UserID)

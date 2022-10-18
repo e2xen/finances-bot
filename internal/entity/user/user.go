@@ -11,15 +11,19 @@ type ExpenseRecord struct {
 }
 
 type Record struct {
-	Expenses          []ExpenseRecord
 	preferredCurrency string
+	MonthLimit        float64
 }
 
-func (r *Record) PreferredCurrency(def string) string {
+func (r *Record) PreferredCurrencyOrDefault(def string) string {
 	if r.preferredCurrency != "" {
 		return r.preferredCurrency
 	}
 	return def
+}
+
+func (r *Record) PreferredCurrency() string {
+	return r.preferredCurrency
 }
 
 func (r *Record) SetPreferredCurrency(curr string) {
