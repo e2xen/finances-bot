@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"context"
 	"fmt"
 	"github.com/jinzhu/now"
 	"github.com/pkg/errors"
@@ -50,18 +51,18 @@ const (
 )
 
 type userStorage interface {
-	GetUserByID(userID int64) (user.Record, error)
-	SaveUserByID(userID int64, rec user.Record) error
-	GetRate(name string) (currency.Rate, error)
-	SaveExpense(userID int64, record user.ExpenseRecord) error
-	GetUserExpenses(userID int64) ([]user.ExpenseRecord, error)
+	GetUserByID(ctx context.Context, userID int64) (user.Record, error)
+	SaveUserByID(ctx context.Context, userID int64, rec user.Record) error
+	GetRate(ctx context.Context, name string) (currency.Rate, error)
+	SaveExpense(ctx context.Context, userID int64, record user.ExpenseRecord) error
+	GetUserExpenses(ctx context.Context, userID int64) ([]user.ExpenseRecord, error)
 }
 
 type config interface {
 	BaseCurrency() string
 }
 
-type handler func(arg string, user int64) (string, error)
+type handler func(ctx context.Context, arg string, user int64) (string, error)
 
 type handlerMap map[string]handler
 
@@ -81,12 +82,12 @@ func newHandler(userStorage userStorage, config config) *HandlerService {
 	return res
 }
 
-func (s *HandlerService) HandleMessage(text string, userID int64) (string, error) {
+func (s *HandlerService) HandleMessage(ctx context.Context, text string, userID int64) (string, error) {
 	cmd, arg := parseCommand(text)
 
 	handler, ok := s.handlersMap[cmd]
 	if ok {
-		return handler(arg, userID)
+		return handler(ctx, arg, userID)
 	}
 	return dontUnderstandMessage, nil
 }
@@ -104,15 +105,15 @@ func newMap(s *HandlerService) handlerMap {
 	return m
 }
 
-func (s *HandlerService) handleStart(_ string, userID int64) (string, error) {
-	err := s.storage.SaveUserByID(userID, user.Record{})
+func (s *HandlerService) handleStart(ctx context.Context, _ string, userID int64) (string, error) {
+	err := s.storage.SaveUserByID(ctx, userID, user.Record{})
 	if err != nil {
 		return helloFailedMessage, errors.Wrap(err, "handle start")
 	}
 	return helloMessage, nil
 }
 
-func (s *HandlerService) handleExpense(arg string, userID int64) (string, error) {
+func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID int64) (string, error) {
 	args := strings.Fields(arg)
 	if len(args) < expenseCmdParts {
 		return incorrectUsageMessage, nil
@@ -135,18 +136,18 @@ func (s *HandlerService) handleExpense(arg string, userID int64) (string, error)
 		Created:  date,
 	}
 
-	userRec, err := s.storage.GetUserByID(userID)
+	userRec, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle expense")
 	}
 
-	rate, err := s.storage.GetRate(userRec.PreferredCurrencyOrDefault(s.defaultCurrency))
+	rate, err := s.storage.GetRate(ctx, userRec.PreferredCurrencyOrDefault(s.defaultCurrency))
 	if err != nil {
 		return cannotGetRateMessage, errors.Wrap(err, "handle expense")
 	}
 
 	convertExpenseToBase(&expense, rate.BaseRate)
-	err = s.storage.SaveExpense(userID, expense)
+	err = s.storage.SaveExpense(ctx, userID, expense)
 	if err != nil {
 		var limErr *customerr.LimitError
 		if errors.As(err, &limErr) {
@@ -157,13 +158,13 @@ func (s *HandlerService) handleExpense(arg string, userID int64) (string, error)
 	return okMessage, nil
 }
 
-func (s *HandlerService) handleReport(arg string, userID int64) (string, error) {
-	userRec, err := s.storage.GetUserByID(userID)
+func (s *HandlerService) handleReport(ctx context.Context, arg string, userID int64) (string, error) {
+	userRec, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
 	}
 
-	expenses, err := s.storage.GetUserExpenses(userID)
+	expenses, err := s.storage.GetUserExpenses(ctx, userID)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
 	}
@@ -180,7 +181,7 @@ func (s *HandlerService) handleReport(arg string, userID int64) (string, error) 
 		expenses = filterExpensesAfter(expenses, now.BeginningOfYear())
 	}
 
-	rate, err := s.storage.GetRate(userRec.PreferredCurrencyOrDefault(s.defaultCurrency))
+	rate, err := s.storage.GetRate(ctx, userRec.PreferredCurrencyOrDefault(s.defaultCurrency))
 	if err != nil {
 		return cannotGetRateMessage, errors.Wrap(err, "handle report")
 	}
@@ -190,18 +191,18 @@ func (s *HandlerService) handleReport(arg string, userID int64) (string, error) 
 	return strings.Join(reportExpenses, "\n"), nil
 }
 
-func (s *HandlerService) handleCurrency(curr string, userID int64) (string, error) {
+func (s *HandlerService) handleCurrency(ctx context.Context, curr string, userID int64) (string, error) {
 	if !utils.Contains(currency.Currencies, curr) {
 		return fmt.Sprintf(invalidCurrencyTemplate, strings.Join(currency.Currencies, ", ")),
 			errors.New("handle currency")
 	}
 
-	u, err := s.storage.GetUserByID(userID)
+	u, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		return cannotSetCurrencyMessage, errors.Wrap(err, "handle currency")
 	}
 	u.SetPreferredCurrency(curr)
-	err = s.storage.SaveUserByID(userID, u)
+	err = s.storage.SaveUserByID(ctx, userID, u)
 	if err != nil {
 		return cannotSetCurrencyMessage, errors.Wrap(err, "handle currency")
 	}
@@ -209,28 +210,28 @@ func (s *HandlerService) handleCurrency(curr string, userID int64) (string, erro
 	return okMessage, nil
 }
 
-func (s *HandlerService) handleLimit(arg string, userID int64) (string, error) {
+func (s *HandlerService) handleLimit(ctx context.Context, arg string, userID int64) (string, error) {
 	limit, err := strconv.ParseFloat(arg, floatBitSize)
 	if err != nil {
 		return incorrectLimitMessage, errors.Wrap(err, "handle limit")
 	}
 
-	u, err := s.storage.GetUserByID(userID)
+	u, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		return cannotSetLimitMessage, errors.Wrap(err, "handle limit")
 	}
-	rate, err := s.storage.GetRate(u.PreferredCurrencyOrDefault(s.defaultCurrency))
+	rate, err := s.storage.GetRate(ctx, u.PreferredCurrencyOrDefault(s.defaultCurrency))
 	if err != nil {
 		return cannotGetRateMessage, errors.Wrap(err, "handle limit")
 	}
 	u.MonthLimit = convertToBase(limit, rate.BaseRate)
-	if err = s.storage.SaveUserByID(userID, u); err != nil {
+	if err = s.storage.SaveUserByID(ctx, userID, u); err != nil {
 		return cannotSetLimitMessage, errors.Wrap(err, "handle limit")
 	}
 
 	return okMessage, nil
 }
 
-func (s *HandlerService) handleNoCommand(_ string, _ int64) (string, error) {
+func (s *HandlerService) handleNoCommand(_ context.Context, _ string, _ int64) (string, error) {
 	return loveToTalkMessage, nil
 }

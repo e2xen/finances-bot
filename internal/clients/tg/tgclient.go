@@ -6,9 +6,13 @@ import (
 	"github.com/pkg/errors"
 	"log"
 	"max.ks1230/project-base/internal/model/messages"
+	"time"
 )
 
-const defaultUpdateOffset = 0
+const (
+	defaultUpdateOffset = 0
+	timeoutSeconds      = 5
+)
 
 type tokenGetter interface {
 	Token() string
@@ -48,16 +52,18 @@ func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Service) 
 			log.Println("Stop listening for messages")
 			return
 		case update := <-updates:
-			c.listenOnce(update, msgModel)
+			c.listenOnce(ctx, update, msgModel)
 		}
 	}
 }
 
-func (c *Client) listenOnce(update tgbotapi.Update, msgModel *messages.Service) {
+func (c *Client) listenOnce(ctx context.Context, update tgbotapi.Update, msgModel *messages.Service) {
 	if update.Message != nil {
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
-		err := msgModel.IncomingMessage(messages.Message{
+		msgCtx, cancel := context.WithTimeout(ctx, time.Second*timeoutSeconds)
+		defer cancel()
+		err := msgModel.HandleIncomingMessage(msgCtx, messages.Message{
 			Text:   update.Message.Text,
 			UserID: update.Message.From.ID,
 		})

@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"context"
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"max.ks1230/project-base/internal/entity/currency"
@@ -11,6 +12,8 @@ import (
 )
 
 func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -24,11 +27,11 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 		Return(nil)
 
 	storage.SaveUserByIDMock.
-		Expect(123, user.Record{}).
+		Expect(ctx, 123, user.Record{}).
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/start",
 		UserID: 123,
 	})
@@ -37,6 +40,8 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 }
 
 func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -50,7 +55,7 @@ func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/none",
 		UserID: 123,
 	})
@@ -59,6 +64,8 @@ func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
 }
 
 func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -71,10 +78,10 @@ func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
 	u.SetPreferredCurrency("USD")
 	storage.
 		GetUserByIDMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return(user.Record{}, nil).
 		SaveUserByIDMock.
-		Expect(123, u).
+		Expect(ctx, 123, u).
 		Return(nil)
 
 	sender.SendMessageMock.
@@ -82,7 +89,7 @@ func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/currency USD",
 		UserID: 123,
 	})
@@ -91,6 +98,8 @@ func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
 }
 
 func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -101,13 +110,13 @@ func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
 
 	storage.
 		GetUserByIDMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return(user.Record{}, nil).
 		SaveUserByIDMock.
-		Expect(123, user.Record{MonthLimit: 1000}).
+		Expect(ctx, 123, user.Record{MonthLimit: 1000}).
 		Return(nil).
 		GetRateMock.
-		Expect("RUB").
+		Expect(ctx, "RUB").
 		Return(currency.Rate{BaseRate: 1}, nil)
 
 	sender.SendMessageMock.
@@ -115,7 +124,7 @@ func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/limit 1000",
 		UserID: 123,
 	})
@@ -124,6 +133,8 @@ func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
 }
 
 func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -138,21 +149,21 @@ func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
 
 	storage.
 		SaveExpenseMock.
-		Inspect(func(id int64, rec user.ExpenseRecord) {
+		Inspect(func(_ context.Context, id int64, rec user.ExpenseRecord) {
 			assert.Equal(m, int64(123), id)
 			assert.Equal(m, float64(500), rec.Amount)
 			assert.Equal(m, "Internet", rec.Category)
 		}).
 		Return(nil).
 		GetUserByIDMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return(user.Record{}, nil).
 		GetRateMock.
-		Expect("RUB").
+		Expect(ctx, "RUB").
 		Return(currency.Rate{BaseRate: 1}, nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/expense Internet 500",
 		UserID: 123,
 	})
@@ -161,6 +172,8 @@ func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
 }
 
 func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -171,7 +184,7 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 
 	storage.
 		GetUserExpensesMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return([]user.ExpenseRecord{
 			{
 				Amount:   1000,
@@ -190,10 +203,10 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 			},
 		}, nil).
 		GetUserByIDMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return(user.Record{}, nil).
 		GetRateMock.
-		Expect("RUB").
+		Expect(ctx, "RUB").
 		Return(currency.Rate{BaseRate: 1}, nil)
 
 	sender.SendMessageMock.
@@ -201,7 +214,7 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/report",
 		UserID: 123,
 	})
@@ -210,6 +223,8 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 }
 
 func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
+	ctx := context.Background()
+
 	m := minimock.NewController(t)
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
@@ -222,7 +237,7 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 	u.SetPreferredCurrency("USD")
 	storage.
 		GetUserExpensesMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return([]user.ExpenseRecord{
 			{
 				Amount:   1000,
@@ -241,10 +256,10 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 			},
 		}, nil).
 		GetUserByIDMock.
-		Expect(123).
+		Expect(ctx, 123).
 		Return(u, nil).
 		GetRateMock.
-		Expect("USD").
+		Expect(ctx, "USD").
 		Return(currency.Rate{BaseRate: 0.1}, nil)
 
 	sender.SendMessageMock.
@@ -252,7 +267,7 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
-	err := model.IncomingMessage(Message{
+	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/report",
 		UserID: 123,
 	})

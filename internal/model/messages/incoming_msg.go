@@ -1,11 +1,13 @@
 package messages
 
+import "context"
+
 type messageSender interface {
 	SendMessage(text string, userID int64) error
 }
 
 type MessageHandler interface {
-	HandleMessage(text string, userID int64) (string, error)
+	HandleMessage(ctx context.Context, text string, userID int64) (string, error)
 }
 
 type Service struct {
@@ -25,8 +27,8 @@ type Message struct {
 	UserID int64
 }
 
-func (s *Service) IncomingMessage(msg Message) error {
-	resp, err := s.handler.HandleMessage(msg.Text, msg.UserID)
+func (s *Service) HandleIncomingMessage(ctx context.Context, msg Message) error {
+	resp, err := s.handler.HandleMessage(ctx, msg.Text, msg.UserID)
 	if err != nil {
 		_ = s.tgClient.SendMessage("Sorry, something wrong happened...\n"+resp, msg.UserID)
 		return err

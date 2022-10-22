@@ -5,6 +5,7 @@ package mock
 //go:generate minimock -i max.ks1230/project-base/internal/model/messages.userStorage -o ./mock/user_storage_mock.go -n UserStorageMock
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -18,32 +19,32 @@ import (
 type UserStorageMock struct {
 	t minimock.Tester
 
-	funcGetRate          func(name string) (r1 currency.Rate, err error)
-	inspectFuncGetRate   func(name string)
+	funcGetRate          func(ctx context.Context, name string) (r1 currency.Rate, err error)
+	inspectFuncGetRate   func(ctx context.Context, name string)
 	afterGetRateCounter  uint64
 	beforeGetRateCounter uint64
 	GetRateMock          mUserStorageMockGetRate
 
-	funcGetUserByID          func(userID int64) (r1 user.Record, err error)
-	inspectFuncGetUserByID   func(userID int64)
+	funcGetUserByID          func(ctx context.Context, userID int64) (r1 user.Record, err error)
+	inspectFuncGetUserByID   func(ctx context.Context, userID int64)
 	afterGetUserByIDCounter  uint64
 	beforeGetUserByIDCounter uint64
 	GetUserByIDMock          mUserStorageMockGetUserByID
 
-	funcGetUserExpenses          func(userID int64) (ea1 []user.ExpenseRecord, err error)
-	inspectFuncGetUserExpenses   func(userID int64)
+	funcGetUserExpenses          func(ctx context.Context, userID int64) (ea1 []user.ExpenseRecord, err error)
+	inspectFuncGetUserExpenses   func(ctx context.Context, userID int64)
 	afterGetUserExpensesCounter  uint64
 	beforeGetUserExpensesCounter uint64
 	GetUserExpensesMock          mUserStorageMockGetUserExpenses
 
-	funcSaveExpense          func(userID int64, record user.ExpenseRecord) (err error)
-	inspectFuncSaveExpense   func(userID int64, record user.ExpenseRecord)
+	funcSaveExpense          func(ctx context.Context, userID int64, record user.ExpenseRecord) (err error)
+	inspectFuncSaveExpense   func(ctx context.Context, userID int64, record user.ExpenseRecord)
 	afterSaveExpenseCounter  uint64
 	beforeSaveExpenseCounter uint64
 	SaveExpenseMock          mUserStorageMockSaveExpense
 
-	funcSaveUserByID          func(userID int64, rec user.Record) (err error)
-	inspectFuncSaveUserByID   func(userID int64, rec user.Record)
+	funcSaveUserByID          func(ctx context.Context, userID int64, rec user.Record) (err error)
+	inspectFuncSaveUserByID   func(ctx context.Context, userID int64, rec user.Record)
 	afterSaveUserByIDCounter  uint64
 	beforeSaveUserByIDCounter uint64
 	SaveUserByIDMock          mUserStorageMockSaveUserByID
@@ -93,6 +94,7 @@ type UserStorageMockGetRateExpectation struct {
 
 // UserStorageMockGetRateParams contains parameters of the userStorage.GetRate
 type UserStorageMockGetRateParams struct {
+	ctx  context.Context
 	name string
 }
 
@@ -103,7 +105,7 @@ type UserStorageMockGetRateResults struct {
 }
 
 // Expect sets up expected params for userStorage.GetRate
-func (mmGetRate *mUserStorageMockGetRate) Expect(name string) *mUserStorageMockGetRate {
+func (mmGetRate *mUserStorageMockGetRate) Expect(ctx context.Context, name string) *mUserStorageMockGetRate {
 	if mmGetRate.mock.funcGetRate != nil {
 		mmGetRate.mock.t.Fatalf("UserStorageMock.GetRate mock is already set by Set")
 	}
@@ -112,7 +114,7 @@ func (mmGetRate *mUserStorageMockGetRate) Expect(name string) *mUserStorageMockG
 		mmGetRate.defaultExpectation = &UserStorageMockGetRateExpectation{}
 	}
 
-	mmGetRate.defaultExpectation.params = &UserStorageMockGetRateParams{name}
+	mmGetRate.defaultExpectation.params = &UserStorageMockGetRateParams{ctx, name}
 	for _, e := range mmGetRate.expectations {
 		if minimock.Equal(e.params, mmGetRate.defaultExpectation.params) {
 			mmGetRate.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetRate.defaultExpectation.params)
@@ -123,7 +125,7 @@ func (mmGetRate *mUserStorageMockGetRate) Expect(name string) *mUserStorageMockG
 }
 
 // Inspect accepts an inspector function that has same arguments as the userStorage.GetRate
-func (mmGetRate *mUserStorageMockGetRate) Inspect(f func(name string)) *mUserStorageMockGetRate {
+func (mmGetRate *mUserStorageMockGetRate) Inspect(f func(ctx context.Context, name string)) *mUserStorageMockGetRate {
 	if mmGetRate.mock.inspectFuncGetRate != nil {
 		mmGetRate.mock.t.Fatalf("Inspect function is already set for UserStorageMock.GetRate")
 	}
@@ -147,7 +149,7 @@ func (mmGetRate *mUserStorageMockGetRate) Return(r1 currency.Rate, err error) *U
 }
 
 // Set uses given function f to mock the userStorage.GetRate method
-func (mmGetRate *mUserStorageMockGetRate) Set(f func(name string) (r1 currency.Rate, err error)) *UserStorageMock {
+func (mmGetRate *mUserStorageMockGetRate) Set(f func(ctx context.Context, name string) (r1 currency.Rate, err error)) *UserStorageMock {
 	if mmGetRate.defaultExpectation != nil {
 		mmGetRate.mock.t.Fatalf("Default expectation is already set for the userStorage.GetRate method")
 	}
@@ -162,14 +164,14 @@ func (mmGetRate *mUserStorageMockGetRate) Set(f func(name string) (r1 currency.R
 
 // When sets expectation for the userStorage.GetRate which will trigger the result defined by the following
 // Then helper
-func (mmGetRate *mUserStorageMockGetRate) When(name string) *UserStorageMockGetRateExpectation {
+func (mmGetRate *mUserStorageMockGetRate) When(ctx context.Context, name string) *UserStorageMockGetRateExpectation {
 	if mmGetRate.mock.funcGetRate != nil {
 		mmGetRate.mock.t.Fatalf("UserStorageMock.GetRate mock is already set by Set")
 	}
 
 	expectation := &UserStorageMockGetRateExpectation{
 		mock:   mmGetRate.mock,
-		params: &UserStorageMockGetRateParams{name},
+		params: &UserStorageMockGetRateParams{ctx, name},
 	}
 	mmGetRate.expectations = append(mmGetRate.expectations, expectation)
 	return expectation
@@ -182,15 +184,15 @@ func (e *UserStorageMockGetRateExpectation) Then(r1 currency.Rate, err error) *U
 }
 
 // GetRate implements messages.userStorage
-func (mmGetRate *UserStorageMock) GetRate(name string) (r1 currency.Rate, err error) {
+func (mmGetRate *UserStorageMock) GetRate(ctx context.Context, name string) (r1 currency.Rate, err error) {
 	mm_atomic.AddUint64(&mmGetRate.beforeGetRateCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetRate.afterGetRateCounter, 1)
 
 	if mmGetRate.inspectFuncGetRate != nil {
-		mmGetRate.inspectFuncGetRate(name)
+		mmGetRate.inspectFuncGetRate(ctx, name)
 	}
 
-	mm_params := &UserStorageMockGetRateParams{name}
+	mm_params := &UserStorageMockGetRateParams{ctx, name}
 
 	// Record call args
 	mmGetRate.GetRateMock.mutex.Lock()
@@ -207,7 +209,7 @@ func (mmGetRate *UserStorageMock) GetRate(name string) (r1 currency.Rate, err er
 	if mmGetRate.GetRateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetRate.GetRateMock.defaultExpectation.Counter, 1)
 		mm_want := mmGetRate.GetRateMock.defaultExpectation.params
-		mm_got := UserStorageMockGetRateParams{name}
+		mm_got := UserStorageMockGetRateParams{ctx, name}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmGetRate.t.Errorf("UserStorageMock.GetRate got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -219,9 +221,9 @@ func (mmGetRate *UserStorageMock) GetRate(name string) (r1 currency.Rate, err er
 		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmGetRate.funcGetRate != nil {
-		return mmGetRate.funcGetRate(name)
+		return mmGetRate.funcGetRate(ctx, name)
 	}
-	mmGetRate.t.Fatalf("Unexpected call to UserStorageMock.GetRate. %v", name)
+	mmGetRate.t.Fatalf("Unexpected call to UserStorageMock.GetRate. %v %v", ctx, name)
 	return
 }
 
@@ -309,6 +311,7 @@ type UserStorageMockGetUserByIDExpectation struct {
 
 // UserStorageMockGetUserByIDParams contains parameters of the userStorage.GetUserByID
 type UserStorageMockGetUserByIDParams struct {
+	ctx    context.Context
 	userID int64
 }
 
@@ -319,7 +322,7 @@ type UserStorageMockGetUserByIDResults struct {
 }
 
 // Expect sets up expected params for userStorage.GetUserByID
-func (mmGetUserByID *mUserStorageMockGetUserByID) Expect(userID int64) *mUserStorageMockGetUserByID {
+func (mmGetUserByID *mUserStorageMockGetUserByID) Expect(ctx context.Context, userID int64) *mUserStorageMockGetUserByID {
 	if mmGetUserByID.mock.funcGetUserByID != nil {
 		mmGetUserByID.mock.t.Fatalf("UserStorageMock.GetUserByID mock is already set by Set")
 	}
@@ -328,7 +331,7 @@ func (mmGetUserByID *mUserStorageMockGetUserByID) Expect(userID int64) *mUserSto
 		mmGetUserByID.defaultExpectation = &UserStorageMockGetUserByIDExpectation{}
 	}
 
-	mmGetUserByID.defaultExpectation.params = &UserStorageMockGetUserByIDParams{userID}
+	mmGetUserByID.defaultExpectation.params = &UserStorageMockGetUserByIDParams{ctx, userID}
 	for _, e := range mmGetUserByID.expectations {
 		if minimock.Equal(e.params, mmGetUserByID.defaultExpectation.params) {
 			mmGetUserByID.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetUserByID.defaultExpectation.params)
@@ -339,7 +342,7 @@ func (mmGetUserByID *mUserStorageMockGetUserByID) Expect(userID int64) *mUserSto
 }
 
 // Inspect accepts an inspector function that has same arguments as the userStorage.GetUserByID
-func (mmGetUserByID *mUserStorageMockGetUserByID) Inspect(f func(userID int64)) *mUserStorageMockGetUserByID {
+func (mmGetUserByID *mUserStorageMockGetUserByID) Inspect(f func(ctx context.Context, userID int64)) *mUserStorageMockGetUserByID {
 	if mmGetUserByID.mock.inspectFuncGetUserByID != nil {
 		mmGetUserByID.mock.t.Fatalf("Inspect function is already set for UserStorageMock.GetUserByID")
 	}
@@ -363,7 +366,7 @@ func (mmGetUserByID *mUserStorageMockGetUserByID) Return(r1 user.Record, err err
 }
 
 // Set uses given function f to mock the userStorage.GetUserByID method
-func (mmGetUserByID *mUserStorageMockGetUserByID) Set(f func(userID int64) (r1 user.Record, err error)) *UserStorageMock {
+func (mmGetUserByID *mUserStorageMockGetUserByID) Set(f func(ctx context.Context, userID int64) (r1 user.Record, err error)) *UserStorageMock {
 	if mmGetUserByID.defaultExpectation != nil {
 		mmGetUserByID.mock.t.Fatalf("Default expectation is already set for the userStorage.GetUserByID method")
 	}
@@ -378,14 +381,14 @@ func (mmGetUserByID *mUserStorageMockGetUserByID) Set(f func(userID int64) (r1 u
 
 // When sets expectation for the userStorage.GetUserByID which will trigger the result defined by the following
 // Then helper
-func (mmGetUserByID *mUserStorageMockGetUserByID) When(userID int64) *UserStorageMockGetUserByIDExpectation {
+func (mmGetUserByID *mUserStorageMockGetUserByID) When(ctx context.Context, userID int64) *UserStorageMockGetUserByIDExpectation {
 	if mmGetUserByID.mock.funcGetUserByID != nil {
 		mmGetUserByID.mock.t.Fatalf("UserStorageMock.GetUserByID mock is already set by Set")
 	}
 
 	expectation := &UserStorageMockGetUserByIDExpectation{
 		mock:   mmGetUserByID.mock,
-		params: &UserStorageMockGetUserByIDParams{userID},
+		params: &UserStorageMockGetUserByIDParams{ctx, userID},
 	}
 	mmGetUserByID.expectations = append(mmGetUserByID.expectations, expectation)
 	return expectation
@@ -398,15 +401,15 @@ func (e *UserStorageMockGetUserByIDExpectation) Then(r1 user.Record, err error) 
 }
 
 // GetUserByID implements messages.userStorage
-func (mmGetUserByID *UserStorageMock) GetUserByID(userID int64) (r1 user.Record, err error) {
+func (mmGetUserByID *UserStorageMock) GetUserByID(ctx context.Context, userID int64) (r1 user.Record, err error) {
 	mm_atomic.AddUint64(&mmGetUserByID.beforeGetUserByIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetUserByID.afterGetUserByIDCounter, 1)
 
 	if mmGetUserByID.inspectFuncGetUserByID != nil {
-		mmGetUserByID.inspectFuncGetUserByID(userID)
+		mmGetUserByID.inspectFuncGetUserByID(ctx, userID)
 	}
 
-	mm_params := &UserStorageMockGetUserByIDParams{userID}
+	mm_params := &UserStorageMockGetUserByIDParams{ctx, userID}
 
 	// Record call args
 	mmGetUserByID.GetUserByIDMock.mutex.Lock()
@@ -423,7 +426,7 @@ func (mmGetUserByID *UserStorageMock) GetUserByID(userID int64) (r1 user.Record,
 	if mmGetUserByID.GetUserByIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetUserByID.GetUserByIDMock.defaultExpectation.Counter, 1)
 		mm_want := mmGetUserByID.GetUserByIDMock.defaultExpectation.params
-		mm_got := UserStorageMockGetUserByIDParams{userID}
+		mm_got := UserStorageMockGetUserByIDParams{ctx, userID}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmGetUserByID.t.Errorf("UserStorageMock.GetUserByID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -435,9 +438,9 @@ func (mmGetUserByID *UserStorageMock) GetUserByID(userID int64) (r1 user.Record,
 		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmGetUserByID.funcGetUserByID != nil {
-		return mmGetUserByID.funcGetUserByID(userID)
+		return mmGetUserByID.funcGetUserByID(ctx, userID)
 	}
-	mmGetUserByID.t.Fatalf("Unexpected call to UserStorageMock.GetUserByID. %v", userID)
+	mmGetUserByID.t.Fatalf("Unexpected call to UserStorageMock.GetUserByID. %v %v", ctx, userID)
 	return
 }
 
@@ -525,6 +528,7 @@ type UserStorageMockGetUserExpensesExpectation struct {
 
 // UserStorageMockGetUserExpensesParams contains parameters of the userStorage.GetUserExpenses
 type UserStorageMockGetUserExpensesParams struct {
+	ctx    context.Context
 	userID int64
 }
 
@@ -535,7 +539,7 @@ type UserStorageMockGetUserExpensesResults struct {
 }
 
 // Expect sets up expected params for userStorage.GetUserExpenses
-func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Expect(userID int64) *mUserStorageMockGetUserExpenses {
+func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Expect(ctx context.Context, userID int64) *mUserStorageMockGetUserExpenses {
 	if mmGetUserExpenses.mock.funcGetUserExpenses != nil {
 		mmGetUserExpenses.mock.t.Fatalf("UserStorageMock.GetUserExpenses mock is already set by Set")
 	}
@@ -544,7 +548,7 @@ func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Expect(userID int64) *
 		mmGetUserExpenses.defaultExpectation = &UserStorageMockGetUserExpensesExpectation{}
 	}
 
-	mmGetUserExpenses.defaultExpectation.params = &UserStorageMockGetUserExpensesParams{userID}
+	mmGetUserExpenses.defaultExpectation.params = &UserStorageMockGetUserExpensesParams{ctx, userID}
 	for _, e := range mmGetUserExpenses.expectations {
 		if minimock.Equal(e.params, mmGetUserExpenses.defaultExpectation.params) {
 			mmGetUserExpenses.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetUserExpenses.defaultExpectation.params)
@@ -555,7 +559,7 @@ func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Expect(userID int64) *
 }
 
 // Inspect accepts an inspector function that has same arguments as the userStorage.GetUserExpenses
-func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Inspect(f func(userID int64)) *mUserStorageMockGetUserExpenses {
+func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Inspect(f func(ctx context.Context, userID int64)) *mUserStorageMockGetUserExpenses {
 	if mmGetUserExpenses.mock.inspectFuncGetUserExpenses != nil {
 		mmGetUserExpenses.mock.t.Fatalf("Inspect function is already set for UserStorageMock.GetUserExpenses")
 	}
@@ -579,7 +583,7 @@ func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Return(ea1 []user.Expe
 }
 
 // Set uses given function f to mock the userStorage.GetUserExpenses method
-func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Set(f func(userID int64) (ea1 []user.ExpenseRecord, err error)) *UserStorageMock {
+func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Set(f func(ctx context.Context, userID int64) (ea1 []user.ExpenseRecord, err error)) *UserStorageMock {
 	if mmGetUserExpenses.defaultExpectation != nil {
 		mmGetUserExpenses.mock.t.Fatalf("Default expectation is already set for the userStorage.GetUserExpenses method")
 	}
@@ -594,14 +598,14 @@ func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) Set(f func(userID int6
 
 // When sets expectation for the userStorage.GetUserExpenses which will trigger the result defined by the following
 // Then helper
-func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) When(userID int64) *UserStorageMockGetUserExpensesExpectation {
+func (mmGetUserExpenses *mUserStorageMockGetUserExpenses) When(ctx context.Context, userID int64) *UserStorageMockGetUserExpensesExpectation {
 	if mmGetUserExpenses.mock.funcGetUserExpenses != nil {
 		mmGetUserExpenses.mock.t.Fatalf("UserStorageMock.GetUserExpenses mock is already set by Set")
 	}
 
 	expectation := &UserStorageMockGetUserExpensesExpectation{
 		mock:   mmGetUserExpenses.mock,
-		params: &UserStorageMockGetUserExpensesParams{userID},
+		params: &UserStorageMockGetUserExpensesParams{ctx, userID},
 	}
 	mmGetUserExpenses.expectations = append(mmGetUserExpenses.expectations, expectation)
 	return expectation
@@ -614,15 +618,15 @@ func (e *UserStorageMockGetUserExpensesExpectation) Then(ea1 []user.ExpenseRecor
 }
 
 // GetUserExpenses implements messages.userStorage
-func (mmGetUserExpenses *UserStorageMock) GetUserExpenses(userID int64) (ea1 []user.ExpenseRecord, err error) {
+func (mmGetUserExpenses *UserStorageMock) GetUserExpenses(ctx context.Context, userID int64) (ea1 []user.ExpenseRecord, err error) {
 	mm_atomic.AddUint64(&mmGetUserExpenses.beforeGetUserExpensesCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetUserExpenses.afterGetUserExpensesCounter, 1)
 
 	if mmGetUserExpenses.inspectFuncGetUserExpenses != nil {
-		mmGetUserExpenses.inspectFuncGetUserExpenses(userID)
+		mmGetUserExpenses.inspectFuncGetUserExpenses(ctx, userID)
 	}
 
-	mm_params := &UserStorageMockGetUserExpensesParams{userID}
+	mm_params := &UserStorageMockGetUserExpensesParams{ctx, userID}
 
 	// Record call args
 	mmGetUserExpenses.GetUserExpensesMock.mutex.Lock()
@@ -639,7 +643,7 @@ func (mmGetUserExpenses *UserStorageMock) GetUserExpenses(userID int64) (ea1 []u
 	if mmGetUserExpenses.GetUserExpensesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetUserExpenses.GetUserExpensesMock.defaultExpectation.Counter, 1)
 		mm_want := mmGetUserExpenses.GetUserExpensesMock.defaultExpectation.params
-		mm_got := UserStorageMockGetUserExpensesParams{userID}
+		mm_got := UserStorageMockGetUserExpensesParams{ctx, userID}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmGetUserExpenses.t.Errorf("UserStorageMock.GetUserExpenses got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -651,9 +655,9 @@ func (mmGetUserExpenses *UserStorageMock) GetUserExpenses(userID int64) (ea1 []u
 		return (*mm_results).ea1, (*mm_results).err
 	}
 	if mmGetUserExpenses.funcGetUserExpenses != nil {
-		return mmGetUserExpenses.funcGetUserExpenses(userID)
+		return mmGetUserExpenses.funcGetUserExpenses(ctx, userID)
 	}
-	mmGetUserExpenses.t.Fatalf("Unexpected call to UserStorageMock.GetUserExpenses. %v", userID)
+	mmGetUserExpenses.t.Fatalf("Unexpected call to UserStorageMock.GetUserExpenses. %v %v", ctx, userID)
 	return
 }
 
@@ -741,6 +745,7 @@ type UserStorageMockSaveExpenseExpectation struct {
 
 // UserStorageMockSaveExpenseParams contains parameters of the userStorage.SaveExpense
 type UserStorageMockSaveExpenseParams struct {
+	ctx    context.Context
 	userID int64
 	record user.ExpenseRecord
 }
@@ -751,7 +756,7 @@ type UserStorageMockSaveExpenseResults struct {
 }
 
 // Expect sets up expected params for userStorage.SaveExpense
-func (mmSaveExpense *mUserStorageMockSaveExpense) Expect(userID int64, record user.ExpenseRecord) *mUserStorageMockSaveExpense {
+func (mmSaveExpense *mUserStorageMockSaveExpense) Expect(ctx context.Context, userID int64, record user.ExpenseRecord) *mUserStorageMockSaveExpense {
 	if mmSaveExpense.mock.funcSaveExpense != nil {
 		mmSaveExpense.mock.t.Fatalf("UserStorageMock.SaveExpense mock is already set by Set")
 	}
@@ -760,7 +765,7 @@ func (mmSaveExpense *mUserStorageMockSaveExpense) Expect(userID int64, record us
 		mmSaveExpense.defaultExpectation = &UserStorageMockSaveExpenseExpectation{}
 	}
 
-	mmSaveExpense.defaultExpectation.params = &UserStorageMockSaveExpenseParams{userID, record}
+	mmSaveExpense.defaultExpectation.params = &UserStorageMockSaveExpenseParams{ctx, userID, record}
 	for _, e := range mmSaveExpense.expectations {
 		if minimock.Equal(e.params, mmSaveExpense.defaultExpectation.params) {
 			mmSaveExpense.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSaveExpense.defaultExpectation.params)
@@ -771,7 +776,7 @@ func (mmSaveExpense *mUserStorageMockSaveExpense) Expect(userID int64, record us
 }
 
 // Inspect accepts an inspector function that has same arguments as the userStorage.SaveExpense
-func (mmSaveExpense *mUserStorageMockSaveExpense) Inspect(f func(userID int64, record user.ExpenseRecord)) *mUserStorageMockSaveExpense {
+func (mmSaveExpense *mUserStorageMockSaveExpense) Inspect(f func(ctx context.Context, userID int64, record user.ExpenseRecord)) *mUserStorageMockSaveExpense {
 	if mmSaveExpense.mock.inspectFuncSaveExpense != nil {
 		mmSaveExpense.mock.t.Fatalf("Inspect function is already set for UserStorageMock.SaveExpense")
 	}
@@ -795,7 +800,7 @@ func (mmSaveExpense *mUserStorageMockSaveExpense) Return(err error) *UserStorage
 }
 
 // Set uses given function f to mock the userStorage.SaveExpense method
-func (mmSaveExpense *mUserStorageMockSaveExpense) Set(f func(userID int64, record user.ExpenseRecord) (err error)) *UserStorageMock {
+func (mmSaveExpense *mUserStorageMockSaveExpense) Set(f func(ctx context.Context, userID int64, record user.ExpenseRecord) (err error)) *UserStorageMock {
 	if mmSaveExpense.defaultExpectation != nil {
 		mmSaveExpense.mock.t.Fatalf("Default expectation is already set for the userStorage.SaveExpense method")
 	}
@@ -810,14 +815,14 @@ func (mmSaveExpense *mUserStorageMockSaveExpense) Set(f func(userID int64, recor
 
 // When sets expectation for the userStorage.SaveExpense which will trigger the result defined by the following
 // Then helper
-func (mmSaveExpense *mUserStorageMockSaveExpense) When(userID int64, record user.ExpenseRecord) *UserStorageMockSaveExpenseExpectation {
+func (mmSaveExpense *mUserStorageMockSaveExpense) When(ctx context.Context, userID int64, record user.ExpenseRecord) *UserStorageMockSaveExpenseExpectation {
 	if mmSaveExpense.mock.funcSaveExpense != nil {
 		mmSaveExpense.mock.t.Fatalf("UserStorageMock.SaveExpense mock is already set by Set")
 	}
 
 	expectation := &UserStorageMockSaveExpenseExpectation{
 		mock:   mmSaveExpense.mock,
-		params: &UserStorageMockSaveExpenseParams{userID, record},
+		params: &UserStorageMockSaveExpenseParams{ctx, userID, record},
 	}
 	mmSaveExpense.expectations = append(mmSaveExpense.expectations, expectation)
 	return expectation
@@ -830,15 +835,15 @@ func (e *UserStorageMockSaveExpenseExpectation) Then(err error) *UserStorageMock
 }
 
 // SaveExpense implements messages.userStorage
-func (mmSaveExpense *UserStorageMock) SaveExpense(userID int64, record user.ExpenseRecord) (err error) {
+func (mmSaveExpense *UserStorageMock) SaveExpense(ctx context.Context, userID int64, record user.ExpenseRecord) (err error) {
 	mm_atomic.AddUint64(&mmSaveExpense.beforeSaveExpenseCounter, 1)
 	defer mm_atomic.AddUint64(&mmSaveExpense.afterSaveExpenseCounter, 1)
 
 	if mmSaveExpense.inspectFuncSaveExpense != nil {
-		mmSaveExpense.inspectFuncSaveExpense(userID, record)
+		mmSaveExpense.inspectFuncSaveExpense(ctx, userID, record)
 	}
 
-	mm_params := &UserStorageMockSaveExpenseParams{userID, record}
+	mm_params := &UserStorageMockSaveExpenseParams{ctx, userID, record}
 
 	// Record call args
 	mmSaveExpense.SaveExpenseMock.mutex.Lock()
@@ -855,7 +860,7 @@ func (mmSaveExpense *UserStorageMock) SaveExpense(userID int64, record user.Expe
 	if mmSaveExpense.SaveExpenseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSaveExpense.SaveExpenseMock.defaultExpectation.Counter, 1)
 		mm_want := mmSaveExpense.SaveExpenseMock.defaultExpectation.params
-		mm_got := UserStorageMockSaveExpenseParams{userID, record}
+		mm_got := UserStorageMockSaveExpenseParams{ctx, userID, record}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmSaveExpense.t.Errorf("UserStorageMock.SaveExpense got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -867,9 +872,9 @@ func (mmSaveExpense *UserStorageMock) SaveExpense(userID int64, record user.Expe
 		return (*mm_results).err
 	}
 	if mmSaveExpense.funcSaveExpense != nil {
-		return mmSaveExpense.funcSaveExpense(userID, record)
+		return mmSaveExpense.funcSaveExpense(ctx, userID, record)
 	}
-	mmSaveExpense.t.Fatalf("Unexpected call to UserStorageMock.SaveExpense. %v %v", userID, record)
+	mmSaveExpense.t.Fatalf("Unexpected call to UserStorageMock.SaveExpense. %v %v %v", ctx, userID, record)
 	return
 }
 
@@ -957,6 +962,7 @@ type UserStorageMockSaveUserByIDExpectation struct {
 
 // UserStorageMockSaveUserByIDParams contains parameters of the userStorage.SaveUserByID
 type UserStorageMockSaveUserByIDParams struct {
+	ctx    context.Context
 	userID int64
 	rec    user.Record
 }
@@ -967,7 +973,7 @@ type UserStorageMockSaveUserByIDResults struct {
 }
 
 // Expect sets up expected params for userStorage.SaveUserByID
-func (mmSaveUserByID *mUserStorageMockSaveUserByID) Expect(userID int64, rec user.Record) *mUserStorageMockSaveUserByID {
+func (mmSaveUserByID *mUserStorageMockSaveUserByID) Expect(ctx context.Context, userID int64, rec user.Record) *mUserStorageMockSaveUserByID {
 	if mmSaveUserByID.mock.funcSaveUserByID != nil {
 		mmSaveUserByID.mock.t.Fatalf("UserStorageMock.SaveUserByID mock is already set by Set")
 	}
@@ -976,7 +982,7 @@ func (mmSaveUserByID *mUserStorageMockSaveUserByID) Expect(userID int64, rec use
 		mmSaveUserByID.defaultExpectation = &UserStorageMockSaveUserByIDExpectation{}
 	}
 
-	mmSaveUserByID.defaultExpectation.params = &UserStorageMockSaveUserByIDParams{userID, rec}
+	mmSaveUserByID.defaultExpectation.params = &UserStorageMockSaveUserByIDParams{ctx, userID, rec}
 	for _, e := range mmSaveUserByID.expectations {
 		if minimock.Equal(e.params, mmSaveUserByID.defaultExpectation.params) {
 			mmSaveUserByID.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSaveUserByID.defaultExpectation.params)
@@ -987,7 +993,7 @@ func (mmSaveUserByID *mUserStorageMockSaveUserByID) Expect(userID int64, rec use
 }
 
 // Inspect accepts an inspector function that has same arguments as the userStorage.SaveUserByID
-func (mmSaveUserByID *mUserStorageMockSaveUserByID) Inspect(f func(userID int64, rec user.Record)) *mUserStorageMockSaveUserByID {
+func (mmSaveUserByID *mUserStorageMockSaveUserByID) Inspect(f func(ctx context.Context, userID int64, rec user.Record)) *mUserStorageMockSaveUserByID {
 	if mmSaveUserByID.mock.inspectFuncSaveUserByID != nil {
 		mmSaveUserByID.mock.t.Fatalf("Inspect function is already set for UserStorageMock.SaveUserByID")
 	}
@@ -1011,7 +1017,7 @@ func (mmSaveUserByID *mUserStorageMockSaveUserByID) Return(err error) *UserStora
 }
 
 // Set uses given function f to mock the userStorage.SaveUserByID method
-func (mmSaveUserByID *mUserStorageMockSaveUserByID) Set(f func(userID int64, rec user.Record) (err error)) *UserStorageMock {
+func (mmSaveUserByID *mUserStorageMockSaveUserByID) Set(f func(ctx context.Context, userID int64, rec user.Record) (err error)) *UserStorageMock {
 	if mmSaveUserByID.defaultExpectation != nil {
 		mmSaveUserByID.mock.t.Fatalf("Default expectation is already set for the userStorage.SaveUserByID method")
 	}
@@ -1026,14 +1032,14 @@ func (mmSaveUserByID *mUserStorageMockSaveUserByID) Set(f func(userID int64, rec
 
 // When sets expectation for the userStorage.SaveUserByID which will trigger the result defined by the following
 // Then helper
-func (mmSaveUserByID *mUserStorageMockSaveUserByID) When(userID int64, rec user.Record) *UserStorageMockSaveUserByIDExpectation {
+func (mmSaveUserByID *mUserStorageMockSaveUserByID) When(ctx context.Context, userID int64, rec user.Record) *UserStorageMockSaveUserByIDExpectation {
 	if mmSaveUserByID.mock.funcSaveUserByID != nil {
 		mmSaveUserByID.mock.t.Fatalf("UserStorageMock.SaveUserByID mock is already set by Set")
 	}
 
 	expectation := &UserStorageMockSaveUserByIDExpectation{
 		mock:   mmSaveUserByID.mock,
-		params: &UserStorageMockSaveUserByIDParams{userID, rec},
+		params: &UserStorageMockSaveUserByIDParams{ctx, userID, rec},
 	}
 	mmSaveUserByID.expectations = append(mmSaveUserByID.expectations, expectation)
 	return expectation
@@ -1046,15 +1052,15 @@ func (e *UserStorageMockSaveUserByIDExpectation) Then(err error) *UserStorageMoc
 }
 
 // SaveUserByID implements messages.userStorage
-func (mmSaveUserByID *UserStorageMock) SaveUserByID(userID int64, rec user.Record) (err error) {
+func (mmSaveUserByID *UserStorageMock) SaveUserByID(ctx context.Context, userID int64, rec user.Record) (err error) {
 	mm_atomic.AddUint64(&mmSaveUserByID.beforeSaveUserByIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmSaveUserByID.afterSaveUserByIDCounter, 1)
 
 	if mmSaveUserByID.inspectFuncSaveUserByID != nil {
-		mmSaveUserByID.inspectFuncSaveUserByID(userID, rec)
+		mmSaveUserByID.inspectFuncSaveUserByID(ctx, userID, rec)
 	}
 
-	mm_params := &UserStorageMockSaveUserByIDParams{userID, rec}
+	mm_params := &UserStorageMockSaveUserByIDParams{ctx, userID, rec}
 
 	// Record call args
 	mmSaveUserByID.SaveUserByIDMock.mutex.Lock()
@@ -1071,7 +1077,7 @@ func (mmSaveUserByID *UserStorageMock) SaveUserByID(userID int64, rec user.Recor
 	if mmSaveUserByID.SaveUserByIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSaveUserByID.SaveUserByIDMock.defaultExpectation.Counter, 1)
 		mm_want := mmSaveUserByID.SaveUserByIDMock.defaultExpectation.params
-		mm_got := UserStorageMockSaveUserByIDParams{userID, rec}
+		mm_got := UserStorageMockSaveUserByIDParams{ctx, userID, rec}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmSaveUserByID.t.Errorf("UserStorageMock.SaveUserByID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -1083,9 +1089,9 @@ func (mmSaveUserByID *UserStorageMock) SaveUserByID(userID int64, rec user.Recor
 		return (*mm_results).err
 	}
 	if mmSaveUserByID.funcSaveUserByID != nil {
-		return mmSaveUserByID.funcSaveUserByID(userID, rec)
+		return mmSaveUserByID.funcSaveUserByID(ctx, userID, rec)
 	}
-	mmSaveUserByID.t.Fatalf("Unexpected call to UserStorageMock.SaveUserByID. %v %v", userID, rec)
+	mmSaveUserByID.t.Fatalf("Unexpected call to UserStorageMock.SaveUserByID. %v %v %v", ctx, userID, rec)
 	return
 }
 
