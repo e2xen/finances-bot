@@ -3,11 +3,12 @@ package fixer
 import (
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (

@@ -4,17 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	sq "github.com/Masterminds/squirrel"
-	"github.com/jinzhu/now"
 	"log"
 
-	// postgres driver
-	_ "github.com/lib/pq"
+	sq "github.com/Masterminds/squirrel"
+	"github.com/jinzhu/now"
+
+	"time"
+
+	_ "github.com/lib/pq" // postgres driver
 	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/entity/user"
 	"max.ks1230/project-base/internal/model/customerr"
-	"time"
 )
 
 const dsnTemplate = "user=%s password=%s host=%s dbname=%s sslmode=disable"

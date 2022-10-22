@@ -2,13 +2,14 @@ package messages
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/entity/user"
 	"max.ks1230/project-base/internal/model/messages/mock"
-	"testing"
-	"time"
 )
 
 func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {

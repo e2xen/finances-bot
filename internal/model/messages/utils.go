@@ -2,10 +2,12 @@ package messages
 
 import (
 	"fmt"
-	"max.ks1230/project-base/internal/entity/user"
+
 	"sort"
 	"strings"
 	"time"
+
+	"max.ks1230/project-base/internal/entity/user"
 )
 
 const commandParts = 2

@@ -3,11 +3,12 @@ package rates
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
+	"time"
+
+	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/utils"
-	"time"
 )
 
 type ratesStorage interface {

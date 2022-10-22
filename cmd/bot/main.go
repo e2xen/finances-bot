@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"max.ks1230/project-base/internal/clients/fixer"
 	"max.ks1230/project-base/internal/clients/tg"
 	"max.ks1230/project-base/internal/config"
 	"max.ks1230/project-base/internal/model/messages"
 	"max.ks1230/project-base/internal/model/rates"
 	"max.ks1230/project-base/internal/model/storage"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {

@@ -3,15 +3,16 @@ package messages
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/jinzhu/now"
 	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/entity/user"
 	"max.ks1230/project-base/internal/model/customerr"
 	"max.ks1230/project-base/internal/utils"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const dateLayout = "02.01.2006"

@@ -15,7 +15,6 @@ linters:
     - exportloopref
     - gocognit
     - gocritic
-    - gofumpt
     - goimports
     - gomnd
     - gomoddirectives

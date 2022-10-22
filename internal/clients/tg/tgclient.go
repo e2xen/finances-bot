@@ -2,11 +2,12 @@ package tg
 
 import (
 	"context"
+	"log"
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
-	"log"
 	"max.ks1230/project-base/internal/model/messages"
-	"time"
 )
 
 const (
