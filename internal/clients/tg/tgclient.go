@@ -2,13 +2,18 @@ package tg
 
 import (
 	"context"
+	"log"
+	"time"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
-	"log"
 	"max.ks1230/project-base/internal/model/messages"
 )
 
-const defaultUpdateOffset = 0
+const (
+	defaultUpdateOffset = 0
+	timeoutSeconds      = 5
+)
 
 type tokenGetter interface {
 	Token() string
@@ -34,7 +39,7 @@ func (c *Client) SendMessage(text string, userID int64) error {
 	return nil
 }
 
-func (c *Client) ListenUpdates(msgModel *messages.Service, ctx context.Context) {
+func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Service) {
 	u := tgbotapi.NewUpdate(defaultUpdateOffset)
 	u.Timeout = 60
 
@@ -48,16 +53,18 @@ func (c *Client) ListenUpdates(msgModel *messages.Service, ctx context.Context) 
 			log.Println("Stop listening for messages")
 			return
 		case update := <-updates:
-			c.listenOnce(update, msgModel)
+			c.listenOnce(ctx, update, msgModel)
 		}
 	}
 }
 
-func (c *Client) listenOnce(update tgbotapi.Update, msgModel *messages.Service) {
+func (c *Client) listenOnce(ctx context.Context, update tgbotapi.Update, msgModel *messages.Service) {
 	if update.Message != nil {
 		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
-		err := msgModel.IncomingMessage(messages.Message{
+		msgCtx, cancel := context.WithTimeout(ctx, time.Second*timeoutSeconds)
+		defer cancel()
+		err := msgModel.HandleIncomingMessage(msgCtx, messages.Message{
 			Text:   update.Message.Text,
 			UserID: update.Message.From.ID,
 		})

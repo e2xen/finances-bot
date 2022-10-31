@@ -3,21 +3,21 @@ package rates
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
+	"time"
+
+	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/utils"
-	"time"
 )
 
 type ratesStorage interface {
-	GetRate(name string) (currency.Rate, error)
-	NewRate(name string) error
-	UpdateRateValue(name string, val float64) error
+	NewRate(ctx context.Context, name string) error
+	UpdateRateValue(ctx context.Context, name string, val float64) error
 }
 
 type ratesProvider interface {
-	GetRates(base string, relatives []string, ctx context.Context) (map[string]float64, error)
+	GetRates(ctx context.Context, base string, relatives []string) (map[string]float64, error)
 }
 
 type config interface {
@@ -30,16 +30,14 @@ type Puller struct {
 	provider     ratesProvider
 	baseCurrency string
 	pullingDelay int64
-	ctx          context.Context
 }
 
-func NewPuller(storage ratesStorage, provider ratesProvider, ctx context.Context, config config) (*Puller, error) {
+func NewPuller(storage ratesStorage, provider ratesProvider, config config) (*Puller, error) {
 	p := &Puller{
 		storage:      storage,
 		provider:     provider,
 		baseCurrency: config.BaseCurrency(),
 		pullingDelay: config.PullingDelayMinutes(),
-		ctx:          ctx,
 	}
 	err := p.initStorage()
 	if err != nil {
@@ -49,25 +47,27 @@ func NewPuller(storage ratesStorage, provider ratesProvider, ctx context.Context
 }
 
 func (p *Puller) initStorage() error {
+	ctx := context.Background()
+
 	if !utils.Contains(currency.Currencies, p.baseCurrency) {
 		return fmt.Errorf("unknown currency %s", p.baseCurrency)
 	}
 
 	for _, curr := range currency.Currencies {
-		err := p.storage.NewRate(curr)
+		err := p.storage.NewRate(ctx, curr)
 		if err != nil {
 			return errors.New("cannot save currency to storage")
 		}
 	}
 
-	err := p.storage.UpdateRateValue(p.baseCurrency, 1)
+	err := p.storage.UpdateRateValue(ctx, p.baseCurrency, 1)
 	if err != nil {
 		return errors.New("cannot update currency")
 	}
 	return nil
 }
 
-func (p *Puller) Pull() {
+func (p *Puller) Pull(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(p.pullingDelay) * time.Minute)
 	firstTick := make(chan struct{}, 1)
 	firstTick <- struct{}{}
@@ -75,30 +75,30 @@ func (p *Puller) Pull() {
 	log.Println("Start pulling rates")
 	for {
 		select {
-		case <-p.ctx.Done():
+		case <-ctx.Done():
 			log.Println("Stop pulling rates")
 			return
 		// fake first tick to pull rates immediately
 		case <-firstTick:
-			p.pullOnce()
+			p.pullOnce(ctx)
 		case <-ticker.C:
-			p.pullOnce()
+			p.pullOnce(ctx)
 		}
 	}
 }
 
-func (p *Puller) pullOnce() {
+func (p *Puller) pullOnce(ctx context.Context) {
 	log.Println("Pulling rates...")
 
 	relatives := p.nonBaseCurrencies()
-	pulledRates, err := p.provider.GetRates(p.baseCurrency, relatives, p.ctx)
+	pulledRates, err := p.provider.GetRates(ctx, p.baseCurrency, relatives)
 	if err != nil {
 		log.Println(errors.Wrap(err, "cannot get rates").Error())
 		return
 	}
 
 	for name, rate := range pulledRates {
-		err = p.storage.UpdateRateValue(name, rate)
+		err = p.storage.UpdateRateValue(ctx, name, rate)
 		if err == nil {
 			log.Printf("successfully saved rate %s\n", name)
 		} else {

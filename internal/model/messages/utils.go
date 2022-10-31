@@ -2,10 +2,12 @@ package messages
 
 import (
 	"fmt"
-	"max.ks1230/project-base/internal/entity/user"
+
 	"sort"
 	"strings"
 	"time"
+
+	"max.ks1230/project-base/internal/entity/user"
 )
 
 const commandParts = 2
@@ -18,17 +20,17 @@ func location() *time.Location {
 	return loc
 }
 
-func parseCommand(text string) (cmd, arg string, err error) {
+func parseCommand(text string) (cmd, arg string) {
 	text = strings.TrimSpace(text)
 	split := strings.SplitN(text, " ", commandParts)
 
 	if len(split) == commandParts {
-		return split[0], split[1], nil
+		return split[0], split[1]
 	}
 	if strings.HasPrefix(text, "/") {
-		return text, "", nil
+		return text, ""
 	}
-	return "", text, nil
+	return "", text
 }
 
 func filterExpensesAfter(exps []user.ExpenseRecord, after time.Time) []user.ExpenseRecord {
@@ -80,4 +82,8 @@ func convertExpensesFromBase(expenses []user.ExpenseRecord, rate float64) (resul
 
 func convertExpenseToBase(exp *user.ExpenseRecord, rate float64) {
 	exp.Amount /= rate
+}
+
+func convertToBase(amount float64, rate float64) float64 {
+	return amount / rate
 }

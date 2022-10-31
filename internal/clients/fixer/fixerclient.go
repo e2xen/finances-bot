@@ -3,11 +3,12 @@ package fixer
 import (
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -35,7 +36,7 @@ func New(getter apiKeyGetter) *Client {
 	return &Client{apiKey: getter.APIKey()}
 }
 
-func (c *Client) GetRates(baseRate string, relativeRates []string, ctx context.Context) (map[string]float64, error) {
+func (c *Client) GetRates(ctx context.Context, baseRate string, relativeRates []string) (map[string]float64, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", latestRatesURL, nil)

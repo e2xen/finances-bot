@@ -5,6 +5,7 @@ package mock
 //go:generate minimock -i max.ks1230/project-base/internal/model/messages.MessageHandler -o ./mock/message_handler_mock.go -n MessageHandlerMock
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -16,8 +17,8 @@ import (
 type MessageHandlerMock struct {
 	t minimock.Tester
 
-	funcHandleMessage          func(text string, userID int64) (s1 string, err error)
-	inspectFuncHandleMessage   func(text string, userID int64)
+	funcHandleMessage          func(ctx context.Context, text string, userID int64) (s1 string, err error)
+	inspectFuncHandleMessage   func(ctx context.Context, text string, userID int64)
 	afterHandleMessageCounter  uint64
 	beforeHandleMessageCounter uint64
 	HandleMessageMock          mMessageHandlerMockHandleMessage
@@ -55,6 +56,7 @@ type MessageHandlerMockHandleMessageExpectation struct {
 
 // MessageHandlerMockHandleMessageParams contains parameters of the MessageHandler.HandleMessage
 type MessageHandlerMockHandleMessageParams struct {
+	ctx    context.Context
 	text   string
 	userID int64
 }
@@ -66,7 +68,7 @@ type MessageHandlerMockHandleMessageResults struct {
 }
 
 // Expect sets up expected params for MessageHandler.HandleMessage
-func (mmHandleMessage *mMessageHandlerMockHandleMessage) Expect(text string, userID int64) *mMessageHandlerMockHandleMessage {
+func (mmHandleMessage *mMessageHandlerMockHandleMessage) Expect(ctx context.Context, text string, userID int64) *mMessageHandlerMockHandleMessage {
 	if mmHandleMessage.mock.funcHandleMessage != nil {
 		mmHandleMessage.mock.t.Fatalf("MessageHandlerMock.HandleMessage mock is already set by Set")
 	}
@@ -75,7 +77,7 @@ func (mmHandleMessage *mMessageHandlerMockHandleMessage) Expect(text string, use
 		mmHandleMessage.defaultExpectation = &MessageHandlerMockHandleMessageExpectation{}
 	}
 
-	mmHandleMessage.defaultExpectation.params = &MessageHandlerMockHandleMessageParams{text, userID}
+	mmHandleMessage.defaultExpectation.params = &MessageHandlerMockHandleMessageParams{ctx, text, userID}
 	for _, e := range mmHandleMessage.expectations {
 		if minimock.Equal(e.params, mmHandleMessage.defaultExpectation.params) {
 			mmHandleMessage.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmHandleMessage.defaultExpectation.params)
@@ -86,7 +88,7 @@ func (mmHandleMessage *mMessageHandlerMockHandleMessage) Expect(text string, use
 }
 
 // Inspect accepts an inspector function that has same arguments as the MessageHandler.HandleMessage
-func (mmHandleMessage *mMessageHandlerMockHandleMessage) Inspect(f func(text string, userID int64)) *mMessageHandlerMockHandleMessage {
+func (mmHandleMessage *mMessageHandlerMockHandleMessage) Inspect(f func(ctx context.Context, text string, userID int64)) *mMessageHandlerMockHandleMessage {
 	if mmHandleMessage.mock.inspectFuncHandleMessage != nil {
 		mmHandleMessage.mock.t.Fatalf("Inspect function is already set for MessageHandlerMock.HandleMessage")
 	}
@@ -110,7 +112,7 @@ func (mmHandleMessage *mMessageHandlerMockHandleMessage) Return(s1 string, err e
 }
 
 // Set uses given function f to mock the MessageHandler.HandleMessage method
-func (mmHandleMessage *mMessageHandlerMockHandleMessage) Set(f func(text string, userID int64) (s1 string, err error)) *MessageHandlerMock {
+func (mmHandleMessage *mMessageHandlerMockHandleMessage) Set(f func(ctx context.Context, text string, userID int64) (s1 string, err error)) *MessageHandlerMock {
 	if mmHandleMessage.defaultExpectation != nil {
 		mmHandleMessage.mock.t.Fatalf("Default expectation is already set for the MessageHandler.HandleMessage method")
 	}
@@ -125,14 +127,14 @@ func (mmHandleMessage *mMessageHandlerMockHandleMessage) Set(f func(text string,
 
 // When sets expectation for the MessageHandler.HandleMessage which will trigger the result defined by the following
 // Then helper
-func (mmHandleMessage *mMessageHandlerMockHandleMessage) When(text string, userID int64) *MessageHandlerMockHandleMessageExpectation {
+func (mmHandleMessage *mMessageHandlerMockHandleMessage) When(ctx context.Context, text string, userID int64) *MessageHandlerMockHandleMessageExpectation {
 	if mmHandleMessage.mock.funcHandleMessage != nil {
 		mmHandleMessage.mock.t.Fatalf("MessageHandlerMock.HandleMessage mock is already set by Set")
 	}
 
 	expectation := &MessageHandlerMockHandleMessageExpectation{
 		mock:   mmHandleMessage.mock,
-		params: &MessageHandlerMockHandleMessageParams{text, userID},
+		params: &MessageHandlerMockHandleMessageParams{ctx, text, userID},
 	}
 	mmHandleMessage.expectations = append(mmHandleMessage.expectations, expectation)
 	return expectation
@@ -145,15 +147,15 @@ func (e *MessageHandlerMockHandleMessageExpectation) Then(s1 string, err error) 
 }
 
 // HandleMessage implements messages.MessageHandler
-func (mmHandleMessage *MessageHandlerMock) HandleMessage(text string, userID int64) (s1 string, err error) {
+func (mmHandleMessage *MessageHandlerMock) HandleMessage(ctx context.Context, text string, userID int64) (s1 string, err error) {
 	mm_atomic.AddUint64(&mmHandleMessage.beforeHandleMessageCounter, 1)
 	defer mm_atomic.AddUint64(&mmHandleMessage.afterHandleMessageCounter, 1)
 
 	if mmHandleMessage.inspectFuncHandleMessage != nil {
-		mmHandleMessage.inspectFuncHandleMessage(text, userID)
+		mmHandleMessage.inspectFuncHandleMessage(ctx, text, userID)
 	}
 
-	mm_params := &MessageHandlerMockHandleMessageParams{text, userID}
+	mm_params := &MessageHandlerMockHandleMessageParams{ctx, text, userID}
 
 	// Record call args
 	mmHandleMessage.HandleMessageMock.mutex.Lock()
@@ -170,7 +172,7 @@ func (mmHandleMessage *MessageHandlerMock) HandleMessage(text string, userID int
 	if mmHandleMessage.HandleMessageMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHandleMessage.HandleMessageMock.defaultExpectation.Counter, 1)
 		mm_want := mmHandleMessage.HandleMessageMock.defaultExpectation.params
-		mm_got := MessageHandlerMockHandleMessageParams{text, userID}
+		mm_got := MessageHandlerMockHandleMessageParams{ctx, text, userID}
 		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmHandleMessage.t.Errorf("MessageHandlerMock.HandleMessage got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
@@ -182,9 +184,9 @@ func (mmHandleMessage *MessageHandlerMock) HandleMessage(text string, userID int
 		return (*mm_results).s1, (*mm_results).err
 	}
 	if mmHandleMessage.funcHandleMessage != nil {
-		return mmHandleMessage.funcHandleMessage(text, userID)
+		return mmHandleMessage.funcHandleMessage(ctx, text, userID)
 	}
-	mmHandleMessage.t.Fatalf("Unexpected call to MessageHandlerMock.HandleMessage. %v %v", text, userID)
+	mmHandleMessage.t.Fatalf("Unexpected call to MessageHandlerMock.HandleMessage. %v %v %v", ctx, text, userID)
 	return
 }
 

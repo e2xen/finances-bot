@@ -13,6 +13,7 @@ type config struct {
 	Telegram TelegramConfig `yaml:"telegram"`
 	Fixer    FixerConfig    `yaml:"fixer"`
 	App      AppConfig      `yaml:"app"`
+	Postgres PostgresConfig `yaml:"postgres"`
 }
 
 type Service struct {
@@ -45,4 +46,8 @@ func (s *Service) Fixer() *FixerConfig {
 
 func (s *Service) App() *AppConfig {
 	return &s.config.App
+}
+
+func (s *Service) Postgres() *PostgresConfig {
+	return &s.config.Postgres
 }

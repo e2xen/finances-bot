@@ -1,0 +1,7 @@
+services:
+  db:
+    image: postgres:14.4
+    environment:
+      POSTGRES_PASSWORD: "strong-password"
+    ports:
+      - 5432:5432
