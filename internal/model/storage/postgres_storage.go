@@ -4,7 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+
+	"github.com/opentracing/opentracing-go"
+
+	"go.uber.org/zap"
+	"max.ks1230/project-base/internal/logger"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/now"
@@ -49,6 +53,9 @@ func NewPostgresStorage(config config) (*PostgresStorage, error) {
 }
 
 func (s *PostgresStorage) GetUserByID(ctx context.Context, id int64) (user.Record, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_getUserById")
+	defer span.Finish()
+
 	query := psql.Select("preferred_currency", "month_limit").
 		From("users").
 		Where(sq.Eq{"id": id})
@@ -64,6 +71,9 @@ func (s *PostgresStorage) GetUserByID(ctx context.Context, id int64) (user.Recor
 }
 
 func (s *PostgresStorage) SaveUserByID(ctx context.Context, id int64, rec user.Record) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_saveUserById")
+	defer span.Finish()
+
 	query := psql.Insert("users").
 		Columns("id", "preferred_currency", "month_limit", "updated_at").
 		Values(id, rec.PreferredCurrency(), rec.MonthLimit, time.Now()).
@@ -75,6 +85,9 @@ func (s *PostgresStorage) SaveUserByID(ctx context.Context, id int64, rec user.R
 }
 
 func (s *PostgresStorage) SaveExpense(ctx context.Context, userID int64, rec user.ExpenseRecord) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_saveExpense")
+	defer span.Finish()
+
 	query := psql.Insert("expenses").
 		Columns("user_id", "amount", "category", "created_at").
 		Values(userID, rec.Amount, rec.Category, rec.Created)
@@ -86,7 +99,7 @@ func (s *PostgresStorage) SaveExpense(ctx context.Context, userID int64, rec use
 	defer func() {
 		txErr := tx.Rollback()
 		if txErr != nil {
-			log.Println("error when transaction rollback", txErr)
+			logger.Error("error when transaction rollback", zap.Error(txErr))
 		}
 	}()
 
@@ -106,6 +119,9 @@ func (s *PostgresStorage) SaveExpense(ctx context.Context, userID int64, rec use
 }
 
 func (s *PostgresStorage) isLimitMet(ctx context.Context, tx *sql.Tx, userID int64) (bool, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_isLimitMet")
+	defer span.Finish()
+
 	query := `
 	SELECT total.s <= total.lim OR total.lim = 0 AS test FROM
 		(
@@ -126,6 +142,9 @@ func (s *PostgresStorage) isLimitMet(ctx context.Context, tx *sql.Tx, userID int
 }
 
 func (s *PostgresStorage) GetUserExpenses(ctx context.Context, userID int64) ([]user.ExpenseRecord, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_getUserExpenses")
+	defer span.Finish()
+
 	query := psql.Select("amount", "category", "created_at").
 		From("expenses").
 		Where(sq.Eq{"user_id": userID})
@@ -137,7 +156,7 @@ func (s *PostgresStorage) GetUserExpenses(ctx context.Context, userID int64) ([]
 	defer func() {
 		rowErr := rows.Close()
 		if rowErr != nil {
-			log.Println("error closing rows", rowErr)
+			logger.Error("error closing rows", zap.Error(rowErr))
 		}
 	}()
 
@@ -158,6 +177,9 @@ func (s *PostgresStorage) GetUserExpenses(ctx context.Context, userID int64) ([]
 }
 
 func (s *PostgresStorage) GetRate(ctx context.Context, name string) (currency.Rate, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_getRate")
+	defer span.Finish()
+
 	query := psql.Select("name", "base_rate", "is_set", "updated_at").
 		From("rates").
 		Where(sq.Eq{"name": name}).
@@ -176,6 +198,9 @@ func (s *PostgresStorage) GetRate(ctx context.Context, name string) (currency.Ra
 }
 
 func (s *PostgresStorage) NewRate(ctx context.Context, name string) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_newRate")
+	defer span.Finish()
+
 	query := psql.Insert("rates").
 		Columns("name", "base_rate", "is_set").
 		Values(name, 0, false)
@@ -184,6 +209,9 @@ func (s *PostgresStorage) NewRate(ctx context.Context, name string) error {
 }
 
 func (s *PostgresStorage) UpdateRateValue(ctx context.Context, name string, val float64) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db_updateRateValue")
+	defer span.Finish()
+
 	query := psql.Insert("rates").
 		Columns("name", "base_rate", "is_set").
 		Values(name, val, true)

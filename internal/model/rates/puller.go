@@ -3,8 +3,13 @@ package rates
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+
+	"go.uber.org/zap"
+	"max.ks1230/project-base/internal/logger"
 
 	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
@@ -72,11 +77,11 @@ func (p *Puller) Pull(ctx context.Context) {
 	firstTick := make(chan struct{}, 1)
 	firstTick <- struct{}{}
 
-	log.Println("Start pulling rates")
+	logger.Info("Start pulling rates")
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Stop pulling rates")
+			logger.Info("Stop pulling rates")
 			return
 		// fake first tick to pull rates immediately
 		case <-firstTick:
@@ -88,25 +93,37 @@ func (p *Puller) Pull(ctx context.Context) {
 }
 
 func (p *Puller) pullOnce(ctx context.Context) {
-	log.Println("Pulling rates...")
+	logger.Info("Pulling current rates...")
+
+	span, ctx := opentracing.StartSpanFromContext(ctx, "pullRates")
+	defer span.Finish()
 
 	relatives := p.nonBaseCurrencies()
 	pulledRates, err := p.provider.GetRates(ctx, p.baseCurrency, relatives)
 	if err != nil {
-		log.Println(errors.Wrap(err, "cannot get rates").Error())
+		logger.Error("cannot get rates", zap.Error(err))
 		return
 	}
 
 	for name, rate := range pulledRates {
-		err = p.storage.UpdateRateValue(ctx, name, rate)
-		if err == nil {
-			log.Printf("successfully saved rate %s\n", name)
-		} else {
-			log.Println(errors.Wrap(err, fmt.Sprintf("failed to save rate %s", name)).Error())
-		}
+		p.updateRate(ctx, name, rate)
 	}
 
-	log.Println("Pulled rates")
+	logger.Info("Successfully pulled current rates")
+}
+
+func (p *Puller) updateRate(ctx context.Context, name string, rate float64) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "updateRate")
+	defer span.Finish()
+	span.SetTag("rate", name)
+
+	err := p.storage.UpdateRateValue(ctx, name, rate)
+	if err == nil {
+		logger.Info("successfully saved rate", zap.String("rate", name))
+	} else {
+		ext.Error.Set(span, true)
+		logger.Error("failed to save rate", zap.Error(err), zap.String("rate", name))
+	}
 }
 
 func (p *Puller) nonBaseCurrencies() []string {

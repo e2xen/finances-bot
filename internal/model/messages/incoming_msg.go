@@ -1,6 +1,12 @@
 package messages
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+)
 
 type messageSender interface {
 	SendMessage(text string, userID int64) error
@@ -28,6 +34,21 @@ type Message struct {
 }
 
 func (s *Service) HandleIncomingMessage(ctx context.Context, msg Message) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "handleMessage")
+	defer span.Finish()
+
+	start := time.Now()
+	err := s.handle(ctx, msg)
+	elapsed := time.Since(start)
+
+	observeResponse(elapsed, err != nil)
+	if err != nil {
+		ext.Error.Set(span, true)
+	}
+	return err
+}
+
+func (s *Service) handle(ctx context.Context, msg Message) error {
 	resp, err := s.handler.HandleMessage(ctx, msg.Text, msg.UserID)
 	if err != nil {
 		_ = s.tgClient.SendMessage("Sorry, something wrong happened...\n"+resp, msg.UserID)

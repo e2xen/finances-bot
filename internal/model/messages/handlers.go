@@ -7,6 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+
+	"go.uber.org/zap"
+	"max.ks1230/project-base/internal/logger"
+
 	"github.com/jinzhu/now"
 	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
@@ -86,6 +91,10 @@ func newHandler(userStorage userStorage, config config) *HandlerService {
 func (s *HandlerService) HandleMessage(ctx context.Context, text string, userID int64) (string, error) {
 	cmd, arg := parseCommand(text)
 
+	span, ctx := opentracing.StartSpanFromContext(ctx, "handleCommand")
+	defer span.Finish()
+	span.SetTag("cmd", cmd)
+
 	handler, ok := s.handlersMap[cmd]
 	if ok {
 		return handler(ctx, arg, userID)
@@ -107,6 +116,9 @@ func newMap(s *HandlerService) handlerMap {
 }
 
 func (s *HandlerService) handleStart(ctx context.Context, _ string, userID int64) (string, error) {
+	logger.Info("handleStart - start", zap.Int64("userID", userID))
+	defer logger.Info("handleStart - end")
+
 	err := s.storage.SaveUserByID(ctx, userID, user.Record{})
 	if err != nil {
 		return helloFailedMessage, errors.Wrap(err, "handle start")
@@ -115,6 +127,9 @@ func (s *HandlerService) handleStart(ctx context.Context, _ string, userID int64
 }
 
 func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID int64) (string, error) {
+	logger.Info("handleExpense - start", zap.Int64("userID", userID), zap.String("arg", arg))
+	defer logger.Info("handleExpense - end")
+
 	args := strings.Fields(arg)
 	if len(args) < expenseCmdParts {
 		return incorrectUsageMessage, nil
@@ -160,6 +175,9 @@ func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID i
 }
 
 func (s *HandlerService) handleReport(ctx context.Context, arg string, userID int64) (string, error) {
+	logger.Info("handleReport - start", zap.Int64("userID", userID), zap.String("arg", arg))
+	defer logger.Info("handleReport - end")
+
 	userRec, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
@@ -192,7 +210,11 @@ func (s *HandlerService) handleReport(ctx context.Context, arg string, userID in
 	return strings.Join(reportExpenses, "\n"), nil
 }
 
-func (s *HandlerService) handleCurrency(ctx context.Context, curr string, userID int64) (string, error) {
+func (s *HandlerService) handleCurrency(ctx context.Context, arg string, userID int64) (string, error) {
+	logger.Info("handleCurrency - start", zap.Int64("userID", userID), zap.String("arg", arg))
+	defer logger.Info("handleCurrency - end")
+
+	curr := arg
 	if !utils.Contains(currency.Currencies, curr) {
 		return fmt.Sprintf(invalidCurrencyTemplate, strings.Join(currency.Currencies, ", ")),
 			errors.New("handle currency")
@@ -212,6 +234,9 @@ func (s *HandlerService) handleCurrency(ctx context.Context, curr string, userID
 }
 
 func (s *HandlerService) handleLimit(ctx context.Context, arg string, userID int64) (string, error) {
+	logger.Info("handleLimit - start", zap.Int64("userID", userID), zap.String("arg", arg))
+	defer logger.Info("handleLimit - end")
+
 	limit, err := strconv.ParseFloat(arg, floatBitSize)
 	if err != nil {
 		return incorrectLimitMessage, errors.Wrap(err, "handle limit")
@@ -233,6 +258,9 @@ func (s *HandlerService) handleLimit(ctx context.Context, arg string, userID int
 	return okMessage, nil
 }
 
-func (s *HandlerService) handleNoCommand(_ context.Context, _ string, _ int64) (string, error) {
+func (s *HandlerService) handleNoCommand(_ context.Context, arg string, userID int64) (string, error) {
+	logger.Info("handleNoCommand - start", zap.Int64("userID", userID), zap.String("arg", arg))
+	defer logger.Info("handleNoCommand - end")
+
 	return loveToTalkMessage, nil
 }

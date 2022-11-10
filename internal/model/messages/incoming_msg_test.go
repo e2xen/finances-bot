@@ -28,7 +28,10 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 		Return(nil)
 
 	storage.SaveUserByIDMock.
-		Expect(ctx, 123, user.Record{}).
+		Inspect(func(_ context.Context, userID int64, rec user.Record) {
+			assert.Equal(m, int64(123), userID)
+			assert.Equal(m, user.Record{}, rec)
+		}).
 		Return(nil)
 
 	model := NewService(sender, storage, cfg)
@@ -79,10 +82,15 @@ func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
 	u.SetPreferredCurrency("USD")
 	storage.
 		GetUserByIDMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return(user.Record{}, nil).
 		SaveUserByIDMock.
-		Expect(ctx, 123, u).
+		Inspect(func(_ context.Context, userID int64, rec user.Record) {
+			assert.Equal(m, int64(123), userID)
+			assert.Equal(m, u, rec)
+		}).
 		Return(nil)
 
 	sender.SendMessageMock.
@@ -111,13 +119,20 @@ func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
 
 	storage.
 		GetUserByIDMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return(user.Record{}, nil).
 		SaveUserByIDMock.
-		Expect(ctx, 123, user.Record{MonthLimit: 1000}).
+		Inspect(func(_ context.Context, userID int64, rec user.Record) {
+			assert.Equal(m, int64(123), userID)
+			assert.Equal(m, user.Record{MonthLimit: 1000}, rec)
+		}).
 		Return(nil).
 		GetRateMock.
-		Expect(ctx, "RUB").
+		Inspect(func(_ context.Context, name string) {
+			assert.Equal(m, "RUB", name)
+		}).
 		Return(currency.Rate{BaseRate: 1}, nil)
 
 	sender.SendMessageMock.
@@ -157,10 +172,14 @@ func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
 		}).
 		Return(nil).
 		GetUserByIDMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return(user.Record{}, nil).
 		GetRateMock.
-		Expect(ctx, "RUB").
+		Inspect(func(_ context.Context, name string) {
+			assert.Equal(m, "RUB", name)
+		}).
 		Return(currency.Rate{BaseRate: 1}, nil)
 
 	model := NewService(sender, storage, cfg)
@@ -185,7 +204,9 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 
 	storage.
 		GetUserExpensesMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return([]user.ExpenseRecord{
 			{
 				Amount:   1000,
@@ -204,10 +225,14 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 			},
 		}, nil).
 		GetUserByIDMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return(user.Record{}, nil).
 		GetRateMock.
-		Expect(ctx, "RUB").
+		Inspect(func(_ context.Context, name string) {
+			assert.Equal(m, "RUB", name)
+		}).
 		Return(currency.Rate{BaseRate: 1}, nil)
 
 	sender.SendMessageMock.
@@ -238,7 +263,9 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 	u.SetPreferredCurrency("USD")
 	storage.
 		GetUserExpensesMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return([]user.ExpenseRecord{
 			{
 				Amount:   1000,
@@ -257,10 +284,14 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 			},
 		}, nil).
 		GetUserByIDMock.
-		Expect(ctx, 123).
+		Inspect(func(_ context.Context, userID int64) {
+			assert.Equal(m, int64(123), userID)
+		}).
 		Return(u, nil).
 		GetRateMock.
-		Expect(ctx, "USD").
+		Inspect(func(_ context.Context, name string) {
+			assert.Equal(m, "USD", name)
+		}).
 		Return(currency.Rate{BaseRate: 0.1}, nil)
 
 	sender.SendMessageMock.

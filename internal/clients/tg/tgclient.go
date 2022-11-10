@@ -2,8 +2,10 @@ package tg
 
 import (
 	"context"
-	"log"
 	"time"
+
+	"go.uber.org/zap"
+	"max.ks1230/project-base/internal/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
@@ -45,12 +47,12 @@ func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Service) 
 
 	updates := c.client.GetUpdatesChan(u)
 
-	log.Println("Start listening for messages")
+	logger.Info("Start listening for messages")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Stop listening for messages")
+			logger.Info("Stop listening for messages")
 			return
 		case update := <-updates:
 			c.listenOnce(ctx, update, msgModel)
@@ -60,16 +62,17 @@ func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Service) 
 
 func (c *Client) listenOnce(ctx context.Context, update tgbotapi.Update, msgModel *messages.Service) {
 	if update.Message != nil {
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+		logger.Info(update.Message.Text, zap.String("user", update.Message.From.UserName))
 
-		msgCtx, cancel := context.WithTimeout(ctx, time.Second*timeoutSeconds)
+		ctx, cancel := context.WithTimeout(ctx, time.Second*timeoutSeconds)
 		defer cancel()
-		err := msgModel.HandleIncomingMessage(msgCtx, messages.Message{
+
+		err := msgModel.HandleIncomingMessage(ctx, messages.Message{
 			Text:   update.Message.Text,
 			UserID: update.Message.From.ID,
 		})
 		if err != nil {
-			log.Println("error processing message:", err)
+			logger.Error("error processing message:", zap.Error(err))
 		}
 	}
 }

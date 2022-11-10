@@ -4,9 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/opentracing/opentracing-go"
+
+	"go.uber.org/zap"
+	"max.ks1230/project-base/internal/logger"
 
 	"github.com/pkg/errors"
 )
@@ -37,6 +41,9 @@ func New(getter apiKeyGetter) *Client {
 }
 
 func (c *Client) GetRates(ctx context.Context, baseRate string, relativeRates []string) (map[string]float64, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "fixerGetRates")
+	defer span.Finish()
+
 	client := &http.Client{}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", latestRatesURL, nil)
@@ -50,6 +57,7 @@ func (c *Client) GetRates(ctx context.Context, baseRate string, relativeRates []
 	q.Add(relativesParam, strings.Join(relativeRates, ","))
 	req.URL.RawQuery = q.Encode()
 
+	logger.Info("request fixer")
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "fixer client")
@@ -61,7 +69,7 @@ func (c *Client) GetRates(ctx context.Context, baseRate string, relativeRates []
 	if err != nil {
 		return nil, errors.Wrap(err, "fixer client")
 	}
-	log.Printf("new response from fixer: %s\n", string(body))
+	logger.Info("response from fixer", zap.ByteString("response", body))
 
 	rates := ratesResponse{}
 	err = json.Unmarshal(body, &rates)
