@@ -21,10 +21,10 @@ type Service struct {
 	handler  MessageHandler
 }
 
-func NewService(tgClient messageSender, storage userStorage, config config) *Service {
+func NewService(tgClient messageSender, storage userStorage, cache reportCache, config config) *Service {
 	return &Service{
 		tgClient: tgClient,
-		handler:  newHandler(storage, config),
+		handler:  newHandler(storage, cache, config),
 	}
 }
 

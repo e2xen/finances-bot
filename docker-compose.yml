@@ -17,3 +17,7 @@ services:
       - 14268:14268
       - 9411:9411
 
+  memcached:
+    image: memcached:latest
+    ports:
+      - "11211:11211"

@@ -87,3 +87,11 @@ func convertExpenseToBase(exp *user.ExpenseRecord, rate float64) {
 func convertToBase(amount float64, rate float64) float64 {
 	return amount / rate
 }
+
+func reportKeys() []string {
+	res := make([]string, 0, len(reportFilters))
+	for k := range reportFilters {
+		res = append(res, k)
+	}
+	return res
+}

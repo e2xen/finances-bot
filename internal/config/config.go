@@ -10,10 +10,11 @@ import (
 const configFile = "data/config.yaml"
 
 type config struct {
-	Telegram TelegramConfig `yaml:"telegram"`
-	Fixer    FixerConfig    `yaml:"fixer"`
-	App      AppConfig      `yaml:"app"`
-	Postgres PostgresConfig `yaml:"postgres"`
+	Telegram  TelegramConfig  `yaml:"telegram"`
+	Fixer     FixerConfig     `yaml:"fixer"`
+	App       AppConfig       `yaml:"app"`
+	Postgres  PostgresConfig  `yaml:"postgres"`
+	Memcached MemcachedConfig `yaml:"memcached"`
 }
 
 type Service struct {
@@ -50,4 +51,8 @@ func (s *Service) App() *AppConfig {
 
 func (s *Service) Postgres() *PostgresConfig {
 	return &s.config.Postgres
+}
+
+func (s *Service) Memcached() *MemcachedConfig {
+	return &s.config.Memcached
 }

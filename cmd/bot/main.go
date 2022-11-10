@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"max.ks1230/project-base/internal/model/cache"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	jconfig "github.com/uber/jaeger-client-go/config"
@@ -49,7 +51,12 @@ func main() {
 		logger.Fatal("failed to init postgres:", zap.Error(err))
 	}
 
-	msgService := messages.NewService(tgClient, userStorage, conf.App())
+	reportCache, err := cache.NewMemcache(conf.Memcached())
+	if err != nil {
+		logger.Fatal("failed to init memcache:", zap.Error(err))
+	}
+
+	msgService := messages.NewService(tgClient, userStorage, reportCache, conf.App())
 
 	ratesPuller, err := rates.NewPuller(userStorage, fixerClient, conf.App())
 	if err != nil {
@@ -65,7 +72,8 @@ func main() {
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
-		syscall.SIGQUIT)
+		syscall.SIGQUIT,
+	)
 
 	go ratesPuller.Pull(ctx)
 

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bradfitz/gomemcache/memcache"
+
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"max.ks1230/project-base/internal/entity/currency"
@@ -19,6 +21,7 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -34,7 +37,7 @@ func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 		}).
 		Return(nil)
 
-	model := NewService(sender, storage, cfg)
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/start",
 		UserID: 123,
@@ -50,6 +53,7 @@ func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -58,7 +62,7 @@ func Test_OnUnknownCommand_ShouldAnswerWithHelpMessage(t *testing.T) {
 		Expect("I don't understand you :(", int64(123)).
 		Return(nil)
 
-	model := NewService(sender, storage, cfg)
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/none",
 		UserID: 123,
@@ -74,6 +78,7 @@ func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -97,7 +102,7 @@ func Test_OnCurrencyCommand_ShouldAnswerOkMessage(t *testing.T) {
 		Expect("Gotcha!", int64(123)).
 		Return(nil)
 
-	model := NewService(sender, storage, cfg)
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/currency USD",
 		UserID: 123,
@@ -113,6 +118,7 @@ func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -139,7 +145,7 @@ func Test_OnLimitCommand_ShouldAnswerOkMessage(t *testing.T) {
 		Expect("Gotcha!", int64(123)).
 		Return(nil)
 
-	model := NewService(sender, storage, cfg)
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/limit 1000",
 		UserID: 123,
@@ -155,6 +161,7 @@ func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -182,7 +189,18 @@ func Test_OnExpenseCommand_ShouldAnswerWithOkMessage(t *testing.T) {
 		}).
 		Return(currency.Rate{BaseRate: 1}, nil)
 
-	model := NewService(sender, storage, cfg)
+	cache.
+		InvalidateCacheMock.
+		Inspect(func(id int64, options []string) {
+			assert.Equal(m, int64(123), id)
+			assert.Contains(m, options, "")
+			assert.Contains(m, options, "week")
+			assert.Contains(m, options, "month")
+			assert.Contains(m, options, "year")
+		}).
+		Return(nil)
+
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/expense Internet 500",
 		UserID: 123,
@@ -198,6 +216,7 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -235,11 +254,51 @@ func Test_OnReportCommand_ShouldShowReport(t *testing.T) {
 		}).
 		Return(currency.Rate{BaseRate: 1}, nil)
 
-	sender.SendMessageMock.
-		Expect("Shopping: 1600.00\nInternet: 1000.00\n\nTotal: 2600.00", int64(123)).
+	expectedReport := "Shopping: 1600.00\nInternet: 1000.00\n\nTotal: 2600.00"
+	cache.
+		GetReportMock.
+		Expect(int64(123), "").
+		Return("", memcache.ErrCacheMiss).
+		CacheReportMock.
+		Expect(int64(123), "", expectedReport).
 		Return(nil)
 
-	model := NewService(sender, storage, cfg)
+	sender.SendMessageMock.
+		Expect(expectedReport, int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cache, cfg)
+	err := model.HandleIncomingMessage(ctx, Message{
+		Text:   "/report",
+		UserID: 123,
+	})
+
+	assert.NoError(t, err)
+}
+
+func Test_OnReportCommand_ShouldShowCachedReport(t *testing.T) {
+	ctx := context.Background()
+
+	m := minimock.NewController(t)
+	defer m.Finish()
+	sender := mock.NewMessageSenderMock(m)
+	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
+	cfg := mock.NewConfigMock(m)
+
+	cfg.BaseCurrencyMock.Return("RUB")
+
+	cachedReport := "Shopping: 1600.00\nInternet: 1000.00\n\nTotal: 2600.00"
+	cache.
+		GetReportMock.
+		Expect(int64(123), "").
+		Return(cachedReport, nil)
+
+	sender.SendMessageMock.
+		Expect(cachedReport, int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/report",
 		UserID: 123,
@@ -255,6 +314,7 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 	defer m.Finish()
 	sender := mock.NewMessageSenderMock(m)
 	storage := mock.NewUserStorageMock(m)
+	cache := mock.NewReportCacheMock(m)
 	cfg := mock.NewConfigMock(m)
 
 	cfg.BaseCurrencyMock.Return("RUB")
@@ -294,11 +354,20 @@ func Test_OnReportCommand_ShouldShowReportInPreferredCurrency(t *testing.T) {
 		}).
 		Return(currency.Rate{BaseRate: 0.1}, nil)
 
-	sender.SendMessageMock.
-		Expect("Shopping: 160.00\nInternet: 100.00\n\nTotal: 260.00", int64(123)).
+	expectedReport := "Shopping: 160.00\nInternet: 100.00\n\nTotal: 260.00"
+	cache.
+		GetReportMock.
+		Expect(int64(123), "").
+		Return("", memcache.ErrCacheMiss).
+		CacheReportMock.
+		Expect(int64(123), "", expectedReport).
 		Return(nil)
 
-	model := NewService(sender, storage, cfg)
+	sender.SendMessageMock.
+		Expect(expectedReport, int64(123)).
+		Return(nil)
+
+	model := NewService(sender, storage, cache, cfg)
 	err := model.HandleIncomingMessage(ctx, Message{
 		Text:   "/report",
 		UserID: 123,

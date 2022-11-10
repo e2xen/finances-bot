@@ -9,7 +9,8 @@ import (
 var logger *zap.Logger
 
 func init() {
-	localLogger, err := zap.NewProduction()
+	// localLogger, err := zap.NewProduction()
+	localLogger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatal("logger init", err)
 	}

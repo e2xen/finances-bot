@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/Masterminds/squirrel v1.5.3
+	github.com/bradfitz/gomemcache v0.0.0-20221031212613-62deef7fc822
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gojuno/minimock/v3 v3.0.10
 	github.com/jinzhu/now v1.1.5
