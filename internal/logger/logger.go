@@ -2,20 +2,34 @@ package logger
 
 import (
 	"log"
+	"os"
 
 	"go.uber.org/zap"
+)
+
+const (
+	logEnvKey     = "LOG_ENV"
+	defaultLogEnv = "dev"
 )
 
 var logger *zap.Logger
 
 func init() {
-	// localLogger, err := zap.NewProduction()
-	localLogger, err := zap.NewDevelopment()
-	if err != nil {
-		log.Fatal("logger init", err)
+	env := os.Getenv(logEnvKey)
+	if env == "" {
+		env = defaultLogEnv
 	}
 
-	logger = localLogger
+	var err error
+	if env == "dev" {
+		logger, err = zap.NewDevelopment()
+	} else if env == "prod" {
+		logger, err = zap.NewProduction()
+	}
+
+	if err != nil || logger == nil {
+		log.Fatal("logger init", err)
+	}
 }
 
 func Info(msg string, fields ...zap.Field) {
