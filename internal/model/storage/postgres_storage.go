@@ -84,7 +84,7 @@ func (s *PostgresStorage) SaveUserByID(ctx context.Context, id int64, rec user.R
 	return errors.Wrap(err, "save user")
 }
 
-func (s *PostgresStorage) SaveExpense(ctx context.Context, userID int64, rec user.ExpenseRecord) error {
+func (s *PostgresStorage) SaveExpense(ctx context.Context, userID int64, rec user.ExpenseRecord) (err error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "db_saveExpense")
 	defer span.Finish()
 
@@ -97,9 +97,11 @@ func (s *PostgresStorage) SaveExpense(ctx context.Context, userID int64, rec use
 		return errors.Wrap(err, "save expense")
 	}
 	defer func() {
-		txErr := tx.Rollback()
-		if txErr != nil {
-			logger.Error("error when transaction rollback", zap.Error(txErr))
+		if err != nil {
+			txErr := tx.Rollback()
+			if txErr != nil {
+				logger.Error("error when transaction rollback", zap.Error(txErr))
+			}
 		}
 	}()
 

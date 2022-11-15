@@ -35,17 +35,18 @@ const (
 	okMessage             = "Gotcha!"
 	noExpensesMessage     = "You have no expenses yet"
 
-	incorrectUsageMessage    = "That is an incorrect command usage"
-	incorrectExpenseMessage  = "Your expense amount is incorrect"
-	incorrectLimitMessage    = "Your limit amount is incorrect"
-	incorrectDateMessage     = "The date is incorrect. Should be dd.mm.yyyy"
-	cannotGetExpensesMessage = "Can't get your expenses atm. Try later"
-	cannotSaveExpenseMessage = "Can't save your expense atm. Try later"
-	cannotSetCurrencyMessage = "Can't set your preferred currency atm. Try later"
-	cannotSetLimitMessage    = "Can't set your month limit atm. Try later"
-	cannotGetRateMessage     = "Can't get currencies rates atm. Try later"
-	limitExceededMessage     = "You exceeded your limit and I'm not writing that down! Congrats!"
-	invalidCurrencyTemplate  = "I don't know that currency. Try one of: %s"
+	incorrectUsageMessage        = "That is an incorrect command usage"
+	incorrectExpenseMessage      = "Your expense amount is incorrect"
+	incorrectLimitMessage        = "Your limit amount is incorrect"
+	incorrectReportPeriodMessage = "Your report period is incorrect"
+	incorrectDateMessage         = "The date is incorrect. Should be dd.mm.yyyy"
+	cannotGetExpensesMessage     = "Can't get your expenses atm. Try later"
+	cannotSaveExpenseMessage     = "Can't save your expense atm. Try later"
+	cannotSetCurrencyMessage     = "Can't set your preferred currency atm. Try later"
+	cannotSetLimitMessage        = "Can't set your month limit atm. Try later"
+	cannotGetRateMessage         = "Can't get currencies rates atm. Try later"
+	limitExceededMessage         = "You exceeded your limit and I'm not writing that down! Congrats!"
+	invalidCurrencyTemplate      = "I don't know that currency. Try one of: %s"
 )
 
 const (
@@ -56,12 +57,25 @@ const (
 	limitCmd    = "/limit"
 )
 
+var reportFilters = map[string]time.Time{
+	"":      {},
+	"week":  now.BeginningOfWeek(),
+	"month": now.BeginningOfMonth(),
+	"year":  now.BeginningOfYear(),
+}
+
 type userStorage interface {
 	GetUserByID(ctx context.Context, userID int64) (user.Record, error)
 	SaveUserByID(ctx context.Context, userID int64, rec user.Record) error
 	GetRate(ctx context.Context, name string) (currency.Rate, error)
 	SaveExpense(ctx context.Context, userID int64, record user.ExpenseRecord) error
 	GetUserExpenses(ctx context.Context, userID int64) ([]user.ExpenseRecord, error)
+}
+
+type reportCache interface {
+	CacheReport(userID int64, option string, report string) error
+	GetReport(userID int64, option string) (string, error)
+	InvalidateCache(userID int64, options []string) error
 }
 
 type config interface {
@@ -75,13 +89,15 @@ type handlerMap map[string]handler
 type HandlerService struct {
 	handlersMap     handlerMap
 	storage         userStorage
+	cache           reportCache
 	defaultCurrency string
 }
 
-func newHandler(userStorage userStorage, config config) *HandlerService {
+func newHandler(userStorage userStorage, cache reportCache, config config) *HandlerService {
 	res := &HandlerService{
 		handlersMap:     nil,
 		storage:         userStorage,
+		cache:           cache,
 		defaultCurrency: config.BaseCurrency(),
 	}
 	res.handlersMap = newMap(res)
@@ -126,9 +142,20 @@ func (s *HandlerService) handleStart(ctx context.Context, _ string, userID int64
 	return helloMessage, nil
 }
 
-func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID int64) (string, error) {
+func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID int64) (res string, err error) {
 	logger.Info("handleExpense - start", zap.Int64("userID", userID), zap.String("arg", arg))
 	defer logger.Info("handleExpense - end")
+
+	defer func() {
+		// invalidate cache in case of success
+		if err == nil {
+			opts := reportKeys()
+			cacheErr := s.cache.InvalidateCache(userID, opts)
+			if cacheErr != nil {
+				logger.Error("failed to invalidate cache", zap.Error(cacheErr))
+			}
+		}
+	}()
 
 	args := strings.Fields(arg)
 	if len(args) < expenseCmdParts {
@@ -174,10 +201,30 @@ func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID i
 	return okMessage, nil
 }
 
-func (s *HandlerService) handleReport(ctx context.Context, arg string, userID int64) (string, error) {
+func (s *HandlerService) handleReport(ctx context.Context, arg string, userID int64) (result string, err error) {
 	logger.Info("handleReport - start", zap.Int64("userID", userID), zap.String("arg", arg))
 	defer logger.Info("handleReport - end")
 
+	report, err := s.cache.GetReport(userID, arg)
+	if err == nil {
+		return report, nil
+	}
+	defer func() {
+		// cache report in case of successful generation
+		if err == nil {
+			cacheErr := s.cache.CacheReport(userID, arg, result)
+			if cacheErr != nil {
+				logger.Error("error caching report", zap.Error(cacheErr))
+			}
+		}
+	}()
+
+	logger.Info(
+		"failed to get report from cache, proceed to generate it",
+		zap.Int64("userID", userID),
+		zap.String("arg", arg),
+		zap.NamedError("cacheErr", err),
+	)
 	userRec, err := s.storage.GetUserByID(ctx, userID)
 	if err != nil {
 		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
@@ -191,14 +238,14 @@ func (s *HandlerService) handleReport(ctx context.Context, arg string, userID in
 		return noExpensesMessage, nil
 	}
 
-	switch arg {
-	case "week":
-		expenses = filterExpensesAfter(expenses, now.BeginningOfWeek())
-	case "month":
-		expenses = filterExpensesAfter(expenses, now.BeginningOfMonth())
-	case "year":
-		expenses = filterExpensesAfter(expenses, now.BeginningOfYear())
+	filter, ok := reportFilters[arg]
+	if !ok {
+		return incorrectReportPeriodMessage, errors.Wrap(
+			fmt.Errorf("report period %s is not supported", arg),
+			"handle report",
+		)
 	}
+	expenses = filterExpensesAfter(expenses, filter)
 
 	rate, err := s.storage.GetRate(ctx, userRec.PreferredCurrencyOrDefault(s.defaultCurrency))
 	if err != nil {
