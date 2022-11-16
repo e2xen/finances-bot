@@ -11,11 +11,18 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
+	apiv1 "max.ks1230/project-base/api/grpc"
 )
 
 // MessageHandlerMock implements messages.MessageHandler
 type MessageHandlerMock struct {
 	t minimock.Tester
+
+	funcAcceptReport          func(ctx context.Context, report *apiv1.ReportResult) (result string, err error)
+	inspectFuncAcceptReport   func(ctx context.Context, report *apiv1.ReportResult)
+	afterAcceptReportCounter  uint64
+	beforeAcceptReportCounter uint64
+	AcceptReportMock          mMessageHandlerMockAcceptReport
 
 	funcHandleMessage          func(ctx context.Context, text string, userID int64) (s1 string, err error)
 	inspectFuncHandleMessage   func(ctx context.Context, text string, userID int64)
@@ -31,10 +38,230 @@ func NewMessageHandlerMock(t minimock.Tester) *MessageHandlerMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AcceptReportMock = mMessageHandlerMockAcceptReport{mock: m}
+	m.AcceptReportMock.callArgs = []*MessageHandlerMockAcceptReportParams{}
+
 	m.HandleMessageMock = mMessageHandlerMockHandleMessage{mock: m}
 	m.HandleMessageMock.callArgs = []*MessageHandlerMockHandleMessageParams{}
 
 	return m
+}
+
+type mMessageHandlerMockAcceptReport struct {
+	mock               *MessageHandlerMock
+	defaultExpectation *MessageHandlerMockAcceptReportExpectation
+	expectations       []*MessageHandlerMockAcceptReportExpectation
+
+	callArgs []*MessageHandlerMockAcceptReportParams
+	mutex    sync.RWMutex
+}
+
+// MessageHandlerMockAcceptReportExpectation specifies expectation struct of the MessageHandler.AcceptReport
+type MessageHandlerMockAcceptReportExpectation struct {
+	mock    *MessageHandlerMock
+	params  *MessageHandlerMockAcceptReportParams
+	results *MessageHandlerMockAcceptReportResults
+	Counter uint64
+}
+
+// MessageHandlerMockAcceptReportParams contains parameters of the MessageHandler.AcceptReport
+type MessageHandlerMockAcceptReportParams struct {
+	ctx    context.Context
+	report *apiv1.ReportResult
+}
+
+// MessageHandlerMockAcceptReportResults contains results of the MessageHandler.AcceptReport
+type MessageHandlerMockAcceptReportResults struct {
+	result string
+	err    error
+}
+
+// Expect sets up expected params for MessageHandler.AcceptReport
+func (mmAcceptReport *mMessageHandlerMockAcceptReport) Expect(ctx context.Context, report *apiv1.ReportResult) *mMessageHandlerMockAcceptReport {
+	if mmAcceptReport.mock.funcAcceptReport != nil {
+		mmAcceptReport.mock.t.Fatalf("MessageHandlerMock.AcceptReport mock is already set by Set")
+	}
+
+	if mmAcceptReport.defaultExpectation == nil {
+		mmAcceptReport.defaultExpectation = &MessageHandlerMockAcceptReportExpectation{}
+	}
+
+	mmAcceptReport.defaultExpectation.params = &MessageHandlerMockAcceptReportParams{ctx, report}
+	for _, e := range mmAcceptReport.expectations {
+		if minimock.Equal(e.params, mmAcceptReport.defaultExpectation.params) {
+			mmAcceptReport.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAcceptReport.defaultExpectation.params)
+		}
+	}
+
+	return mmAcceptReport
+}
+
+// Inspect accepts an inspector function that has same arguments as the MessageHandler.AcceptReport
+func (mmAcceptReport *mMessageHandlerMockAcceptReport) Inspect(f func(ctx context.Context, report *apiv1.ReportResult)) *mMessageHandlerMockAcceptReport {
+	if mmAcceptReport.mock.inspectFuncAcceptReport != nil {
+		mmAcceptReport.mock.t.Fatalf("Inspect function is already set for MessageHandlerMock.AcceptReport")
+	}
+
+	mmAcceptReport.mock.inspectFuncAcceptReport = f
+
+	return mmAcceptReport
+}
+
+// Return sets up results that will be returned by MessageHandler.AcceptReport
+func (mmAcceptReport *mMessageHandlerMockAcceptReport) Return(result string, err error) *MessageHandlerMock {
+	if mmAcceptReport.mock.funcAcceptReport != nil {
+		mmAcceptReport.mock.t.Fatalf("MessageHandlerMock.AcceptReport mock is already set by Set")
+	}
+
+	if mmAcceptReport.defaultExpectation == nil {
+		mmAcceptReport.defaultExpectation = &MessageHandlerMockAcceptReportExpectation{mock: mmAcceptReport.mock}
+	}
+	mmAcceptReport.defaultExpectation.results = &MessageHandlerMockAcceptReportResults{result, err}
+	return mmAcceptReport.mock
+}
+
+// Set uses given function f to mock the MessageHandler.AcceptReport method
+func (mmAcceptReport *mMessageHandlerMockAcceptReport) Set(f func(ctx context.Context, report *apiv1.ReportResult) (result string, err error)) *MessageHandlerMock {
+	if mmAcceptReport.defaultExpectation != nil {
+		mmAcceptReport.mock.t.Fatalf("Default expectation is already set for the MessageHandler.AcceptReport method")
+	}
+
+	if len(mmAcceptReport.expectations) > 0 {
+		mmAcceptReport.mock.t.Fatalf("Some expectations are already set for the MessageHandler.AcceptReport method")
+	}
+
+	mmAcceptReport.mock.funcAcceptReport = f
+	return mmAcceptReport.mock
+}
+
+// When sets expectation for the MessageHandler.AcceptReport which will trigger the result defined by the following
+// Then helper
+func (mmAcceptReport *mMessageHandlerMockAcceptReport) When(ctx context.Context, report *apiv1.ReportResult) *MessageHandlerMockAcceptReportExpectation {
+	if mmAcceptReport.mock.funcAcceptReport != nil {
+		mmAcceptReport.mock.t.Fatalf("MessageHandlerMock.AcceptReport mock is already set by Set")
+	}
+
+	expectation := &MessageHandlerMockAcceptReportExpectation{
+		mock:   mmAcceptReport.mock,
+		params: &MessageHandlerMockAcceptReportParams{ctx, report},
+	}
+	mmAcceptReport.expectations = append(mmAcceptReport.expectations, expectation)
+	return expectation
+}
+
+// Then sets up MessageHandler.AcceptReport return parameters for the expectation previously defined by the When method
+func (e *MessageHandlerMockAcceptReportExpectation) Then(result string, err error) *MessageHandlerMock {
+	e.results = &MessageHandlerMockAcceptReportResults{result, err}
+	return e.mock
+}
+
+// AcceptReport implements messages.MessageHandler
+func (mmAcceptReport *MessageHandlerMock) AcceptReport(ctx context.Context, report *apiv1.ReportResult) (result string, err error) {
+	mm_atomic.AddUint64(&mmAcceptReport.beforeAcceptReportCounter, 1)
+	defer mm_atomic.AddUint64(&mmAcceptReport.afterAcceptReportCounter, 1)
+
+	if mmAcceptReport.inspectFuncAcceptReport != nil {
+		mmAcceptReport.inspectFuncAcceptReport(ctx, report)
+	}
+
+	mm_params := &MessageHandlerMockAcceptReportParams{ctx, report}
+
+	// Record call args
+	mmAcceptReport.AcceptReportMock.mutex.Lock()
+	mmAcceptReport.AcceptReportMock.callArgs = append(mmAcceptReport.AcceptReportMock.callArgs, mm_params)
+	mmAcceptReport.AcceptReportMock.mutex.Unlock()
+
+	for _, e := range mmAcceptReport.AcceptReportMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.result, e.results.err
+		}
+	}
+
+	if mmAcceptReport.AcceptReportMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmAcceptReport.AcceptReportMock.defaultExpectation.Counter, 1)
+		mm_want := mmAcceptReport.AcceptReportMock.defaultExpectation.params
+		mm_got := MessageHandlerMockAcceptReportParams{ctx, report}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAcceptReport.t.Errorf("MessageHandlerMock.AcceptReport got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmAcceptReport.AcceptReportMock.defaultExpectation.results
+		if mm_results == nil {
+			mmAcceptReport.t.Fatal("No results are set for the MessageHandlerMock.AcceptReport")
+		}
+		return (*mm_results).result, (*mm_results).err
+	}
+	if mmAcceptReport.funcAcceptReport != nil {
+		return mmAcceptReport.funcAcceptReport(ctx, report)
+	}
+	mmAcceptReport.t.Fatalf("Unexpected call to MessageHandlerMock.AcceptReport. %v %v", ctx, report)
+	return
+}
+
+// AcceptReportAfterCounter returns a count of finished MessageHandlerMock.AcceptReport invocations
+func (mmAcceptReport *MessageHandlerMock) AcceptReportAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAcceptReport.afterAcceptReportCounter)
+}
+
+// AcceptReportBeforeCounter returns a count of MessageHandlerMock.AcceptReport invocations
+func (mmAcceptReport *MessageHandlerMock) AcceptReportBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAcceptReport.beforeAcceptReportCounter)
+}
+
+// Calls returns a list of arguments used in each call to MessageHandlerMock.AcceptReport.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmAcceptReport *mMessageHandlerMockAcceptReport) Calls() []*MessageHandlerMockAcceptReportParams {
+	mmAcceptReport.mutex.RLock()
+
+	argCopy := make([]*MessageHandlerMockAcceptReportParams, len(mmAcceptReport.callArgs))
+	copy(argCopy, mmAcceptReport.callArgs)
+
+	mmAcceptReport.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockAcceptReportDone returns true if the count of the AcceptReport invocations corresponds
+// the number of defined expectations
+func (m *MessageHandlerMock) MinimockAcceptReportDone() bool {
+	for _, e := range m.AcceptReportMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AcceptReportMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAcceptReportCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAcceptReport != nil && mm_atomic.LoadUint64(&m.afterAcceptReportCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockAcceptReportInspect logs each unmet expectation
+func (m *MessageHandlerMock) MinimockAcceptReportInspect() {
+	for _, e := range m.AcceptReportMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to MessageHandlerMock.AcceptReport with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AcceptReportMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAcceptReportCounter) < 1 {
+		if m.AcceptReportMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to MessageHandlerMock.AcceptReport")
+		} else {
+			m.t.Errorf("Expected call to MessageHandlerMock.AcceptReport with params: %#v", *m.AcceptReportMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAcceptReport != nil && mm_atomic.LoadUint64(&m.afterAcceptReportCounter) < 1 {
+		m.t.Error("Expected call to MessageHandlerMock.AcceptReport")
+	}
 }
 
 type mMessageHandlerMockHandleMessage struct {
@@ -258,6 +485,8 @@ func (m *MessageHandlerMock) MinimockHandleMessageInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *MessageHandlerMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockAcceptReportInspect()
+
 		m.MinimockHandleMessageInspect()
 		m.t.FailNow()
 	}
@@ -282,5 +511,6 @@ func (m *MessageHandlerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *MessageHandlerMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockAcceptReportDone() &&
 		m.MinimockHandleMessageDone()
 }
