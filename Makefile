@@ -23,7 +23,9 @@ generate: install-mockgen
 
 mock:
 	cd internal/model/messages && \
-	minimock -o ./mock -s _mock.go
+		minimock -o ./mock -s _mock.go
+	cd internal/model/reports && \
+    	minimock -o ./mock -s _mock.go
 
 gen-proto:
 	protoc --go_out=. --go_opt=paths=source_relative \

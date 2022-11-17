@@ -98,7 +98,7 @@ func (g *Generator) GenerateReport(ctx context.Context, userID int64, period str
 }
 
 func filterExpensesAfter(exps []user.ExpenseRecord, after time.Time) []user.ExpenseRecord {
-	res := make([]user.ExpenseRecord, 0)
+	res := make([]user.ExpenseRecord, 0, len(exps))
 	for _, exp := range exps {
 		if after.Before(exp.Created) {
 			res = append(res, exp)
@@ -121,7 +121,7 @@ func groupExpenses(exps []user.ExpenseRecord) *apiv1.ReportResult {
 	for _, exp := range exps {
 		m[exp.Category] += exp.Amount
 	}
-	records := make([]*apiv1.ReportRecord, 0)
+	records := make([]*apiv1.ReportRecord, 0, len(m))
 	total := 0.0
 	for cat, am := range m {
 		records = append(records, &apiv1.ReportRecord{Category: cat, Amount: am})

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"max.ks1230/project-base/internal/model/reports"
-
 	apiv12 "max.ks1230/project-base/api/grpc"
 
 	"google.golang.org/protobuf/proto"
@@ -27,14 +25,18 @@ type reportGenerator interface {
 	GenerateReport(ctx context.Context, userID int64, period string) (report *apiv12.ReportResult, err error)
 }
 
+type reportSender interface {
+	SendReport(ctx context.Context, report *apiv12.ReportResult) error
+}
+
 type Consumer struct {
 	consumerGroup sarama.ConsumerGroup
 	topic         string
 	generator     reportGenerator
-	acceptorAddr  string
+	sender        reportSender
 }
 
-func NewConsumer(cfg consumerConfig, generator reportGenerator, acceptorAddr string) (*Consumer, error) {
+func NewConsumer(cfg consumerConfig, generator reportGenerator, sender reportSender) (*Consumer, error) {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_5_0_0
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
@@ -44,7 +46,7 @@ func NewConsumer(cfg consumerConfig, generator reportGenerator, acceptorAddr str
 		consumerGroup: consumerGroup,
 		topic:         cfg.ReportsTopic(),
 		generator:     generator,
-		acceptorAddr:  acceptorAddr,
+		sender:        sender,
 	}, err
 }
 
@@ -95,7 +97,7 @@ func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 
 func (c *Consumer) processRequest(ctx context.Context, req *apiv1.ReportRequest) {
 	report, _ := c.generator.GenerateReport(ctx, req.GetUserID(), req.GetPeriod())
-	err := reports.SendReport(ctx, c.acceptorAddr, report)
+	err := c.sender.SendReport(ctx, report)
 	if err != nil {
 		logger.Error("failed to send report", zap.Error(err))
 	}

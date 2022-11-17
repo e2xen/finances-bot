@@ -31,7 +31,13 @@ func main() {
 
 	reportGenerator := reports.NewGenerator(conf.App(), db)
 
-	consumer, err := kafka.NewConsumer(conf.Kafka(), reportGenerator, acceptorAddr)
+	reportSender, err := reports.NewSender(acceptorAddr)
+	if err != nil {
+		logger.Fatal("failed to init grpc client", zap.Error(err))
+	}
+	defer reportSender.Close()
+
+	consumer, err := kafka.NewConsumer(conf.Kafka(), reportGenerator, reportSender)
 	if err != nil {
 		logger.Fatal("failed to init kafka consumer", zap.Error(err))
 	}
