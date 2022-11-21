@@ -23,7 +23,14 @@ generate: install-mockgen
 
 mock:
 	cd internal/model/messages && \
-	minimock -o ./mock -s _mock.go
+		minimock -o ./mock -s _mock.go
+	cd internal/model/reports && \
+    	minimock -o ./mock -s _mock.go
+
+gen-proto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+ 	--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+ 	 api/*/*.proto
 
 lint: install-lint
 	${LINTBIN} run

@@ -15,6 +15,7 @@ type config struct {
 	App       AppConfig       `yaml:"app"`
 	Postgres  PostgresConfig  `yaml:"postgres"`
 	Memcached MemcachedConfig `yaml:"memcached"`
+	Kafka     KafkaConfig     `yaml:"kafka"`
 }
 
 type Service struct {
@@ -55,4 +56,8 @@ func (s *Service) Postgres() *PostgresConfig {
 
 func (s *Service) Memcached() *MemcachedConfig {
 	return &s.config.Memcached
+}
+
+func (s *Service) Kafka() *KafkaConfig {
+	return &s.config.Kafka
 }

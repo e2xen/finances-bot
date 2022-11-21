@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package report;
+option go_package = "max.ks1230/project-base/api;apiv1";
+
+message ReportRecord {
+  string category = 1;
+  double amount = 2;
+}
+
+message ReportResult {
+  OperationStatus status = 1;
+  int64 userID = 2;
+  string period = 3;
+  repeated ReportRecord records = 4;
+  double totalAmount = 5;
+}
+
+message OperationStatus {
+  bool success = 1;
+  optional string error = 2;
+}
+
+service ReportAcceptor {
+  rpc AcceptReport(ReportResult) returns (OperationStatus) {}
+}

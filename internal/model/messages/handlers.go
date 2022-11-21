@@ -7,12 +7,17 @@ import (
 	"strings"
 	"time"
 
+	apiv12 "max.ks1230/project-base/api/grpc"
+	"max.ks1230/project-base/internal/model/reports"
+
+	"google.golang.org/protobuf/proto"
+	apiv1 "max.ks1230/project-base/api/kafka"
+
 	"github.com/opentracing/opentracing-go"
 
 	"go.uber.org/zap"
 	"max.ks1230/project-base/internal/logger"
 
-	"github.com/jinzhu/now"
 	"github.com/pkg/errors"
 	"max.ks1230/project-base/internal/entity/currency"
 	"max.ks1230/project-base/internal/entity/user"
@@ -34,19 +39,20 @@ const (
 	loveToTalkMessage     = "I would love to talk about it more!"
 	okMessage             = "Gotcha!"
 	noExpensesMessage     = "You have no expenses yet"
+	generatingReport      = "Generating report..."
 
-	incorrectUsageMessage        = "That is an incorrect command usage"
-	incorrectExpenseMessage      = "Your expense amount is incorrect"
-	incorrectLimitMessage        = "Your limit amount is incorrect"
-	incorrectReportPeriodMessage = "Your report period is incorrect"
-	incorrectDateMessage         = "The date is incorrect. Should be dd.mm.yyyy"
-	cannotGetExpensesMessage     = "Can't get your expenses atm. Try later"
-	cannotSaveExpenseMessage     = "Can't save your expense atm. Try later"
-	cannotSetCurrencyMessage     = "Can't set your preferred currency atm. Try later"
-	cannotSetLimitMessage        = "Can't set your month limit atm. Try later"
-	cannotGetRateMessage         = "Can't get currencies rates atm. Try later"
-	limitExceededMessage         = "You exceeded your limit and I'm not writing that down! Congrats!"
-	invalidCurrencyTemplate      = "I don't know that currency. Try one of: %s"
+	incorrectUsageMessage    = "That is an incorrect command usage"
+	incorrectExpenseMessage  = "Your expense amount is incorrect"
+	incorrectLimitMessage    = "Your limit amount is incorrect"
+	incorrectDateMessage     = "The date is incorrect. Should be dd.mm.yyyy"
+	cannotGetExpensesMessage = "Can't get your expenses atm. Try later"
+	cannotSaveExpenseMessage = "Can't save your expense atm. Try later"
+	cannotSetCurrencyMessage = "Can't set your preferred currency atm. Try later"
+	cannotSetLimitMessage    = "Can't set your month limit atm. Try later"
+	cannotGetRateMessage     = "Can't get currencies rates atm. Try later"
+	cannotGenReportMessage   = "Can't generate report atm. Try later"
+	limitExceededMessage     = "You exceeded your limit and I'm not writing that down! Congrats!"
+	invalidCurrencyTemplate  = "I don't know that currency. Try one of: %s"
 )
 
 const (
@@ -57,11 +63,8 @@ const (
 	limitCmd    = "/limit"
 )
 
-var reportFilters = map[string]time.Time{
-	"":      {},
-	"week":  now.BeginningOfWeek(),
-	"month": now.BeginningOfMonth(),
-	"year":  now.BeginningOfYear(),
+type reportRequestProducer interface {
+	ProduceMessage(message []byte) error
 }
 
 type userStorage interface {
@@ -69,7 +72,6 @@ type userStorage interface {
 	SaveUserByID(ctx context.Context, userID int64, rec user.Record) error
 	GetRate(ctx context.Context, name string) (currency.Rate, error)
 	SaveExpense(ctx context.Context, userID int64, record user.ExpenseRecord) error
-	GetUserExpenses(ctx context.Context, userID int64) ([]user.ExpenseRecord, error)
 }
 
 type reportCache interface {
@@ -90,14 +92,19 @@ type HandlerService struct {
 	handlersMap     handlerMap
 	storage         userStorage
 	cache           reportCache
+	producer        reportRequestProducer
 	defaultCurrency string
 }
 
-func newHandler(userStorage userStorage, cache reportCache, config config) *HandlerService {
+func newHandler(config config,
+	userStorage userStorage,
+	cache reportCache,
+	producer reportRequestProducer) *HandlerService {
 	res := &HandlerService{
 		handlersMap:     nil,
 		storage:         userStorage,
 		cache:           cache,
+		producer:        producer,
 		defaultCurrency: config.BaseCurrency(),
 	}
 	res.handlersMap = newMap(res)
@@ -149,7 +156,7 @@ func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID i
 	defer func() {
 		// invalidate cache in case of success
 		if err == nil {
-			opts := reportKeys()
+			opts := reports.ReportPeriods()
 			cacheErr := s.cache.InvalidateCache(userID, opts)
 			if cacheErr != nil {
 				logger.Error("failed to invalidate cache", zap.Error(cacheErr))
@@ -201,7 +208,7 @@ func (s *HandlerService) handleExpense(ctx context.Context, arg string, userID i
 	return okMessage, nil
 }
 
-func (s *HandlerService) handleReport(ctx context.Context, arg string, userID int64) (result string, err error) {
+func (s *HandlerService) handleReport(_ context.Context, arg string, userID int64) (result string, err error) {
 	logger.Info("handleReport - start", zap.Int64("userID", userID), zap.String("arg", arg))
 	defer logger.Info("handleReport - end")
 
@@ -209,52 +216,53 @@ func (s *HandlerService) handleReport(ctx context.Context, arg string, userID in
 	if err == nil {
 		return report, nil
 	}
+
+	logger.Info(
+		"failed to get report from cache, request generation",
+		zap.Int64("userID", userID),
+		zap.String("arg", arg),
+		zap.NamedError("cacheErr", err),
+	)
+
+	req, err := proto.Marshal(&apiv1.ReportRequest{
+		UserID: userID,
+		Period: arg,
+	})
+	if err != nil {
+		return cannotGenReportMessage, errors.Wrap(err, "handle report")
+	}
+
+	err = s.producer.ProduceMessage(req)
+	if err != nil {
+		return cannotGenReportMessage, errors.Wrap(err, "handle report")
+	}
+
+	return generatingReport, nil
+}
+
+func (s *HandlerService) AcceptReport(_ context.Context, report *apiv12.ReportResult) (result string, err error) {
+	logger.Info("acceptReport - start", zap.Int64("userID", report.GetUserID()))
+	defer logger.Info("acceptReport - end")
+
 	defer func() {
 		// cache report in case of successful generation
 		if err == nil {
-			cacheErr := s.cache.CacheReport(userID, arg, result)
+			cacheErr := s.cache.CacheReport(report.GetUserID(), report.GetPeriod(), result)
 			if cacheErr != nil {
 				logger.Error("error caching report", zap.Error(cacheErr))
 			}
 		}
 	}()
 
-	logger.Info(
-		"failed to get report from cache, proceed to generate it",
-		zap.Int64("userID", userID),
-		zap.String("arg", arg),
-		zap.NamedError("cacheErr", err),
-	)
-	userRec, err := s.storage.GetUserByID(ctx, userID)
-	if err != nil {
-		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
+	if !report.GetStatus().GetSuccess() {
+		return cannotGenReportMessage, errors.Wrap(errors.New((*report).GetStatus().GetError()), "accept report")
 	}
 
-	expenses, err := s.storage.GetUserExpenses(ctx, userID)
-	if err != nil {
-		return cannotGetExpensesMessage, errors.Wrap(err, "handle report")
-	}
-	if len(expenses) == 0 {
+	if len(report.GetRecords()) == 0 {
 		return noExpensesMessage, nil
 	}
 
-	filter, ok := reportFilters[arg]
-	if !ok {
-		return incorrectReportPeriodMessage, errors.Wrap(
-			fmt.Errorf("report period %s is not supported", arg),
-			"handle report",
-		)
-	}
-	expenses = filterExpensesAfter(expenses, filter)
-
-	rate, err := s.storage.GetRate(ctx, userRec.PreferredCurrencyOrDefault(s.defaultCurrency))
-	if err != nil {
-		return cannotGetRateMessage, errors.Wrap(err, "handle report")
-	}
-	expenses = convertExpensesFromBase(expenses, rate.BaseRate)
-
-	reportExpenses := groupByCategory(expenses)
-	return strings.Join(reportExpenses, "\n"), nil
+	return formatReport(report), nil
 }
 
 func (s *HandlerService) handleCurrency(ctx context.Context, arg string, userID int64) (string, error) {

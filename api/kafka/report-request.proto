@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package report;
+option go_package = "max.ks1230/project-base/api;apiv1";
+
+message ReportRequest {
+  int64 userID = 1;
+  string period = 2;
+}
