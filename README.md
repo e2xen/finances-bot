@@ -31,6 +31,10 @@ Although the app itself is not dockerized yet, all the necessary components can 
 
 Basic testing of message handlers is done with the `testing` framework. Mocks are generated using [`minimock`](http://github.com/gojuno/minimock).
 
+## Linter
+
+All the code is checked with the `golangci-lint` in the **GitHub actions**.
+
 ## Migrations
 
 Migrations are performed with the [`migrate`](https://github.com/golang-migrate/migrate) tool (see [migrations](./migrations) directory).
