@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package report;
-option go_package = "max.ks1230/project-base/api;apiv1";
+option go_package = "max.ks1230/finances-bot/api;apiv1";
 
 message ReportRecord {
   string category = 1;

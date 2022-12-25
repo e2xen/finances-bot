@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
-	"max.ks1230/project-base/internal/model/messages"
+	"max.ks1230/finances-bot/internal/model/messages"
 )
 
 const (

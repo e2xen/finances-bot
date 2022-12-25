@@ -5,13 +5,13 @@ import (
 	"os"
 	"os/signal"
 
-	"max.ks1230/project-base/internal/model/reports"
+	"max.ks1230/finances-bot/internal/model/reports"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/clients/kafka"
-	"max.ks1230/project-base/internal/config"
-	"max.ks1230/project-base/internal/logger"
-	"max.ks1230/project-base/internal/model/storage"
+	"max.ks1230/finances-bot/internal/clients/kafka"
+	"max.ks1230/finances-bot/internal/config"
+	"max.ks1230/finances-bot/internal/logger"
+	"max.ks1230/finances-bot/internal/model/storage"
 )
 
 const acceptorAddr = "127.0.0.1:8080"

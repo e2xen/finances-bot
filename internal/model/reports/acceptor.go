@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
-	pb "max.ks1230/project-base/api/grpc"
+	pb "max.ks1230/finances-bot/api/grpc"
 )
 
 type reportAcceptor interface {

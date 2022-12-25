@@ -9,24 +9,24 @@ import (
 	"syscall"
 	"time"
 
-	"max.ks1230/project-base/internal/model/reports"
+	"max.ks1230/finances-bot/internal/model/reports"
 
-	"max.ks1230/project-base/internal/clients/cache"
+	"max.ks1230/finances-bot/internal/clients/cache"
 
-	"max.ks1230/project-base/internal/clients/kafka"
+	"max.ks1230/finances-bot/internal/clients/kafka"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	jconfig "github.com/uber/jaeger-client-go/config"
 	"go.uber.org/zap"
 
-	"max.ks1230/project-base/internal/clients/fixer"
-	"max.ks1230/project-base/internal/clients/tg"
-	"max.ks1230/project-base/internal/config"
-	"max.ks1230/project-base/internal/logger"
-	"max.ks1230/project-base/internal/model/messages"
-	"max.ks1230/project-base/internal/model/rates"
-	"max.ks1230/project-base/internal/model/storage"
+	"max.ks1230/finances-bot/internal/clients/fixer"
+	"max.ks1230/finances-bot/internal/clients/tg"
+	"max.ks1230/finances-bot/internal/config"
+	"max.ks1230/finances-bot/internal/logger"
+	"max.ks1230/finances-bot/internal/model/messages"
+	"max.ks1230/finances-bot/internal/model/rates"
+	"max.ks1230/finances-bot/internal/model/storage"
 )
 
 const (

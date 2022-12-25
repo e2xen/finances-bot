@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	pb "max.ks1230/project-base/api/grpc"
-	"max.ks1230/project-base/internal/logger"
+	pb "max.ks1230/finances-bot/api/grpc"
+	"max.ks1230/finances-bot/internal/logger"
 )
 
 type Sender struct {

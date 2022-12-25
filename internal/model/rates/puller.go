@@ -9,11 +9,11 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
 	"github.com/pkg/errors"
-	"max.ks1230/project-base/internal/entity/currency"
-	"max.ks1230/project-base/internal/utils"
+	"max.ks1230/finances-bot/internal/entity/currency"
+	"max.ks1230/finances-bot/internal/utils"
 )
 
 type ratesStorage interface {

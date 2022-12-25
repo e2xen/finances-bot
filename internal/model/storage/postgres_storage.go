@@ -8,7 +8,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/now"
@@ -17,9 +17,9 @@ import (
 
 	_ "github.com/lib/pq" // postgres driver
 	"github.com/pkg/errors"
-	"max.ks1230/project-base/internal/entity/currency"
-	"max.ks1230/project-base/internal/entity/user"
-	"max.ks1230/project-base/internal/model/customerr"
+	"max.ks1230/finances-bot/internal/entity/currency"
+	"max.ks1230/finances-bot/internal/entity/user"
+	"max.ks1230/finances-bot/internal/model/customerr"
 )
 
 const dsnTemplate = "user=%s password=%s host=%s dbname=%s sslmode=disable"

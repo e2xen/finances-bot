@@ -7,9 +7,9 @@ import (
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
-	"max.ks1230/project-base/internal/entity/currency"
-	"max.ks1230/project-base/internal/entity/user"
-	"max.ks1230/project-base/internal/model/reports/mock"
+	"max.ks1230/finances-bot/internal/entity/currency"
+	"max.ks1230/finances-bot/internal/entity/user"
+	"max.ks1230/finances-bot/internal/model/reports/mock"
 )
 
 func Test_OnGenerateReport_ShouldReturnReportInUSD(t *testing.T) {

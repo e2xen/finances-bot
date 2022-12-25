@@ -5,7 +5,7 @@ MOCKGEN=${BINDIR}/mockgen_${GOVER}
 SMARTIMPORTS=${BINDIR}/smartimports_${GOVER}
 LINTVER=v1.49.0
 LINTBIN=${BINDIR}/lint_${GOVER}_${LINTVER}
-PACKAGE=max.ks1230/project-base/cmd/bot
+PACKAGE=max.ks1230/finances-bot/cmd/bot
 
 all: format build test lint
 

@@ -1,0 +1,27 @@
+# config should be placed at data/config.yaml
+
+telegram:
+  token: token
+
+fixer:
+  api-key: api-key
+
+app:
+  base-currency: RUB
+  rate-pulling-delay-minutes: 60
+
+postgres:
+  host: localhost
+  db: postgres
+  username: postgres
+  password: strong-password
+
+memcached:
+  hosts:
+    - 127.0.0.1:11211
+
+kafka:
+  brokers:
+    - 127.0.0.1:9092
+  consumer-group: reporters
+  reports-topic: report-requests

@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	apiv12 "max.ks1230/project-base/api/grpc"
+	apiv12 "max.ks1230/finances-bot/api/grpc"
 
 	"google.golang.org/protobuf/proto"
-	apiv1 "max.ks1230/project-base/api/kafka"
+	apiv1 "max.ks1230/finances-bot/api/kafka"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/Shopify/sarama"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 )
 
 type consumerConfig interface {

@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
 	"github.com/bradfitz/gomemcache/memcache"
 )

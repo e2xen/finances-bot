@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"google.golang.org/protobuf/proto"
-	apiv1 "max.ks1230/project-base/api/kafka"
+	apiv1 "max.ks1230/finances-bot/api/kafka"
 
 	"github.com/bradfitz/gomemcache/memcache"
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
-	"max.ks1230/project-base/internal/entity/currency"
-	"max.ks1230/project-base/internal/entity/user"
-	"max.ks1230/project-base/internal/model/messages/mock"
+	"max.ks1230/finances-bot/internal/entity/currency"
+	"max.ks1230/finances-bot/internal/entity/user"
+	"max.ks1230/finances-bot/internal/model/messages/mock"
 )
 
 func Test_OnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {

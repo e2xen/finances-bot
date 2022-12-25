@@ -10,7 +10,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
 	"github.com/pkg/errors"
 )

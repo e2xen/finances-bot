@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	apiv1 "max.ks1230/project-base/api/grpc"
-	"max.ks1230/project-base/internal/logger"
+	apiv1 "max.ks1230/finances-bot/api/grpc"
+	"max.ks1230/finances-bot/internal/logger"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"

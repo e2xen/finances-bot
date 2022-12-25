@@ -7,22 +7,22 @@ import (
 	"strings"
 	"time"
 
-	apiv12 "max.ks1230/project-base/api/grpc"
-	"max.ks1230/project-base/internal/model/reports"
+	apiv12 "max.ks1230/finances-bot/api/grpc"
+	"max.ks1230/finances-bot/internal/model/reports"
 
 	"google.golang.org/protobuf/proto"
-	apiv1 "max.ks1230/project-base/api/kafka"
+	apiv1 "max.ks1230/finances-bot/api/kafka"
 
 	"github.com/opentracing/opentracing-go"
 
 	"go.uber.org/zap"
-	"max.ks1230/project-base/internal/logger"
+	"max.ks1230/finances-bot/internal/logger"
 
 	"github.com/pkg/errors"
-	"max.ks1230/project-base/internal/entity/currency"
-	"max.ks1230/project-base/internal/entity/user"
-	"max.ks1230/project-base/internal/model/customerr"
-	"max.ks1230/project-base/internal/utils"
+	"max.ks1230/finances-bot/internal/entity/currency"
+	"max.ks1230/finances-bot/internal/entity/user"
+	"max.ks1230/finances-bot/internal/model/customerr"
+	"max.ks1230/finances-bot/internal/utils"
 )
 
 const dateLayout = "02.01.2006"

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	apiv1 "max.ks1230/project-base/api/grpc"
+	apiv1 "max.ks1230/finances-bot/api/grpc"
 
-	"max.ks1230/project-base/internal/entity/user"
+	"max.ks1230/finances-bot/internal/entity/user"
 )
 
 const commandParts = 2
